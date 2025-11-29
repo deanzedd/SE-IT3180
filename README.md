@@ -193,60 +193,174 @@ npm run dev
 
 ## 6 Hướng dẫn chạy dự án khi Clone từ Git về (Cho người mới)
 
-Đây là quy trình chuẩn khi bạn clone code này về một máy tính khác.
+Đây là quy trình chuẩn khi bạn clone code này về một máy tính khác. Hướng dẫn này hỗ trợ MongoDB trên cloud (Atlas) hoặc local.
 
-Yêu cầu:
+### Yêu cầu
 
-Máy đã cài Node.js.
+- **Node.js** đã được cài đặt (LTS từ https://nodejs.org)
+- **npm** (tự động khi cài Node.js)
+- **MongoDB** (tùy chọn):
+  - Sử dụng **MongoDB Atlas** (Cloud, khuyến nghị cho người mới) — Tạo cluster miễn phí tại https://cloud.mongodb.com
+  - Hoặc **MongoDB local** — Cài đặt từ https://www.mongodb.com/try/download/community
 
-Máy đã cài MongoDB.
+### Bước 0: Chuẩn bị MongoDB URI (nếu chưa có)
+
+#### Nếu dùng MongoDB Atlas (Cloud):
+
+1. Vào https://cloud.mongodb.com và đăng nhập / tạo tài khoản
+2. Tạo một **Cluster** miễn phí
+3. Vào **Database Access** → tạo một user (lưu username và password)
+4. Vào **Network Access** → cho phép IP của bạn (hoặc thêm 0.0.0.0/0 để cho phép tất cả, chỉ dùng tạm)
+5. Vào **Clusters** → **Connect** → **Connect your application** → chọn **Node.js**
+6. Copy chuỗi kết nối (URI) và thay thế:
+   - `<password>` → password của user vừa tạo
+   - `<dbname>` → tên database của bạn (vd: `quan_ly_chung_cu`)
+
+Ví dụ URI:
+```
+mongodb+srv://myUser:myPassword@cluster0.xxxxx.mongodb.net/quan_ly_chung_cu?retryWrites=true&w=majority
+```
+
+#### Nếu dùng MongoDB local:
+
+```
+mongodb://localhost:27017/quan_ly_chung_cu
+```
 
 ### Bước 1: Clone dự án
 
-```
+```powershell
 git clone https://github.com/deanzedd/SE-IT3180.git
-cd QuanLyChungCu
+cd SE-IT3180
 ```
 
-### Bước 2: Chạy Backend (Quan trọng nhất là file .env)
+### Bước 2: Cài đặt và chạy Backend
 
-Vào thư mục backend: 
-```
+#### 2.1 Vào thư mục backend:
+```powershell
 cd backend
 ```
 
-Cài đặt thư viện: 
+#### 2.2 Cài đặt thư viện:
+```powershell
+npm install
 ```
-npm install 
-#(Lệnh này sẽ tự tải lại node_modules).
-```
-Tạo file .env: Tạo một file tên là .env trong thư mục backend và dán nội dung sau vào (vì file này không có trên Git):
+
+#### 2.3 Tạo file `.env`:
+
+Tạo file tên ``.env`` trong thư mục `backend` với nội dung sau (thay MongoDB URI của bạn):
+
 ```
 PORT=5000
-MONGO_URI=mongodb://localhost:27017/quan_ly_chung_cu
-JWT_SECRET=ma_bao_mat_cua_ban_123456
+MONGO_URI=mongodb+srv://myUser:myPassword@cluster0.xxxxx.mongodb.net/quan_ly_chung_cu?retryWrites=true&w=majority
+JWT_SECRET=your_secret_key_here_min_32_chars_long
 JWT_EXPIRE=30d
 ```
 
-Chạy server: 
-```
-node server.js
+**Lưu ý quan trọng:**
+- Thay `MONGO_URI` bằng chuỗi kết nối MongoDB của bạn (từ Bước 0)
+- Để tạo `JWT_SECRET` an toàn, chạy lệnh PowerShell sau:
+  ```powershell
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  ```
+  Lấy kết quả và dán vào `JWT_SECRET`
+
+#### 2.4 Chạy server backend:
+```powershell
+npm start
 ```
 
-### Bước 3: Chạy Frontend
-
-Mở một terminal mới, từ thư mục gốc vào frontend: 
+Kết quả mong muốn:
 ```
+MongoDB Connected: cluster0.xxxxx.mongodb.net
+Server running on port 5000
+```
+
+### Bước 3: Tạo admin user (cho lần đầu)
+
+**Tại cửa sổ terminal backend đang chạy**, mở một **terminal mới** (PowerShell hoặc cmd) và:
+
+```powershell
+cd backend
+node scripts/seedAdmin.js
+```
+
+Kết quả:
+```
+Connecting to MongoDB...
+✓ Connected to MongoDB
+✓ Admin user created successfully!
+  Username: admin
+  Full Name: Administrator
+  Role: admin
+  ID: <mongo-id>
+✓ Connection closed
+```
+
+**Thông tin đăng nhập mặc định:**
+- Username: `admin`
+- Password: `Admin123!`
+
+Bạn có thể thay đổi password sau khi đăng nhập lần đầu.
+
+### Bước 4: Cài đặt và chạy Frontend
+
+**Mở một terminal mới** (đừng đóng terminal backend) từ thư mục gốc:
+
+#### 4.1 Vào thư mục frontend:
+```powershell
 cd frontend
 ```
 
-Cài đặt thư viện: 
-```
-npm install 
-#(Tự tải React, Tailwind, Vite...).
+#### 4.2 Cài đặt thư viện:
+```powershell
+npm install
 ```
 
-Chạy web: 
-```
+#### 4.3 Chạy web:
+```powershell
 npm run dev
 ```
+
+Kết quả sẽ hiển thị:
+```
+VITE v7.2.5 ready in XXX ms
+
+➜  Local:   http://localhost:5173/
+```
+
+### Bước 5: Truy cập ứng dụng
+
+1. Mở trình duyệt và vào http://localhost:5173
+2. Đăng nhập bằng:
+   - **Username:** `admin`
+   - **Password:** `Admin123!`
+3. Bạn sẽ vào Dashboard
+
+### Bước 6: Test API (Tùy chọn)
+
+Để test API từ VS Code, hãy:
+
+1. Cài đặt extension **REST Client** (ID: `humao.rest-client`)
+2. Mở file `backend/test-login.http` để test login API
+3. Click **Send Request** trong file đó
+
+Hoặc dùng lệnh `curl` từ PowerShell:
+```powershell
+curl -X POST http://localhost:5000/api/auth/login `
+  -H "Content-Type: application/json" `
+  -d '{\"username\":\"admin\",\"password\":\"Admin123!\"}'
+```
+
+### Ghi chú quan trọng
+
+- **File `.env` không nên commit vào Git** — Thêm vào `.gitignore` nếu chưa có
+- **JWT_SECRET phải giữ bí mật** — Không chia sẻ với người khác
+- **Khi dừng chạy:** Nhấn Ctrl+C trong terminal backend và frontend
+- **Lỗi "npm: The term 'npm' is not recognized"?**
+  - Restart PowerShell / VSCode terminal
+  - Hoặc: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force` (Windows)
+- **Lỗi kết nối MongoDB?**
+  - Kiểm tra MongoDB URI trong `.env`
+  - Kiểm tra IP whitelist trên MongoDB Atlas (nếu dùng cloud)
+  - Kiểm tra MongoDB service đang chạy (nếu dùng local)
