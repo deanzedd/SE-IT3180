@@ -1,0 +1,48 @@
+@host = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MzJiMWQ2MDhkNmVkYjE4OTMwZTI3MiIsImlhdCI6MTc2NDk2MzI1MiwiZXhwIjoxNzY3NTU1MjUyfQ.1pxGsdXMmx2JHTOmaLCuzCM8UJzLHj_p0HYxe135D48
+# THAY THẾ {{YOUR_AUTH_TOKEN}} bằng Token JWT hợp lệ sau khi đăng nhập
+
+### --- TEST 1: TẠO ĐỢT THU MỚI THÀNH CÔNG (CREATE) ---
+# Endpoint: POST /api/paymentSession
+@sessionId = 6933f070fcedd4dc2a6544e1
+POST {{host}}/api/paymentSessions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "title": "Đợt thu phí Quý 4 - 2025",
+    "description": "Bao gồm phí dịch vụ và phí quản lý chung cư",
+    "startDate": "2025-12-01T00:00:00.000Z",
+    "endDate": "2025-12-31T00:00:00.000Z",
+    "fees": [
+        {
+            "fee": "6933a2556b82f86bb7ee9432",
+            "unitPrice": 15100,
+            "note": "Ưu đãi 10%"
+        }
+    ],
+    "isActive": true
+}
+
+### --- TEST 2: LẤY DANH SÁCH TẤT CẢ ĐỢT THU (READ) ---
+# Endpoint: GET /api/paymentSessions
+GET {{host}}/api/paymentSessions
+Authorization: Bearer {{token}}
+
+### --- TEST 3: SỬA THÔNG TIN ĐỢT THU (UPDATE) ---
+# Endpoint: PUT /api/paymentSessions/:id
+# LƯU Ý: Thay {{sessionId}} bằng ID từ phản hồi TEST 1
+PUT {{host}}/api/paymentSessions/{{sessionId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "description": "Đã điều chỉnh lại giá cho phí quản lý",
+    "isActive": false
+}
+
+### --- TEST 4: XÓA ĐỢT THU (DELETE) ---
+# Endpoint: DELETE /api/payments/sessions/:id
+# LƯU Ý: Thao tác này chỉ nên thực hiện sau khi test tất cả các bước trên
+DELETE {{host}}/api/paymentSessions/{{sessionId}}
+Authorization: Bearer {{token}}

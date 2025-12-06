@@ -1,0 +1,37 @@
+# File: backend/test_household.http
+
+@host = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MzJiMWQ2MDhkNmVkYjE4OTMwZTI3MiIsImlhdCI6MTc2NDk2MzI1MiwiZXhwIjoxNzY3NTU1MjUyfQ.1pxGsdXMmx2JHTOmaLCuzCM8UJzLHj_p0HYxe135D48
+# LƯU Ý: Thay {{YOUR_AUTH_TOKEN}} bằng token JWT bạn nhận được sau khi Đăng nhập (POST /api/auth/login)
+
+### 1. KIỂM THỬ: Lấy tất cả Hộ khẩu (GET /api/households)
+# Chức năng: getHouseholds
+# Yêu cầu: Cần Token xác thực
+GET {{host}}/api/households
+Authorization: Bearer {{token}}
+
+### 2. KIỂM THỬ: Tạo Hộ khẩu mới thành công (POST /api/households)
+# Chức năng: createHousehold
+# Yêu cầu: Token xác thực + JSON hợp lệ
+POST {{host}}/api/households
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "apartmentNumber": "303",
+    "area": 85.0,
+    "ownerName": "Phạm Văn Mới"
+}
+
+### 3. KIỂM THỬ: Tạo Hộ khẩu thất bại (Số căn hộ bị trùng)
+# Chức năng: createHousehold (Kiểm tra lỗi 400)
+# Yêu cầu: Token xác thực + Số căn hộ đã tồn tại (ví dụ: 101 từ seed script)
+POST {{host}}/api/households
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "apartmentNumber": "101", 
+    "area": 90.0,
+    "ownerName": "Trần Văn Chủ"
+}

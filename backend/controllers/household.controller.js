@@ -1,5 +1,5 @@
 const Household = require('../models/household');
-
+const Resident = require('../models/residents');
 // @desc    Get all households
 // @route   GET /api/households
 const getHouseholds = async (req, res) => {
