@@ -422,18 +422,22 @@ VITE v7.2.5 ready in XXX ms
 
 ### Bước 6: Test API (Tùy chọn)
 
-Để test API từ VS Code, hãy:
+Sử dụng REST Client (VS Code extension) và các file .http trong thư mục backend/ để kiểm tra các Route API.
 
-1. Cài đặt extension **REST Client** (ID: `humao.rest-client`)
-2. Mở file `backend/test-login.http` để test login API
-3. Click **Send Request** trong file đó
+QUAN TRỌNG: Luôn chạy POST /api/auth/login trước để lấy Token.
 
-Hoặc dùng lệnh `curl` từ PowerShell:
-```powershell
-curl -X POST http://localhost:5000/api/auth/login `
-  -H "Content-Type: application/json" `
-  -d '{\"username\":\"admin\",\"password\":\"Admin123!\"}'
-```
+#### 1. Đăng nhập (Lấy Token)
+| File | Endpoint	| Method |	Vai trò |
+|---|:---:|:---:|---|
+| test_login.http |	/api/auth/login	| POST |	Lấy Token JWT của admin. Copy Token này để dùng cho các bước sau. |
+
+#### 2. Kiểm thử các chức năng
+Mở các file test_**tên_model**.http
+Paste Token vừa lấy vào: @token = {{YOUR_AUTH_TOKEN}}
+Ví dụ: Token là abc123 thì @token = abc123
+Phía trên mỗi request (GET/PUT/POST), nhấn Send Request để kiểm tra xem Response đã thành công chưa.
+
+
 
 ### Ghi chú quan trọng
 
