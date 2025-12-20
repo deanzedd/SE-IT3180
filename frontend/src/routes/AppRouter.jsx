@@ -8,6 +8,7 @@ import HouseholdListPage from '../pages/Household/HouseholdListPage';
 import ResidentListPage from '../pages/Household/ResidentListPage';
 import FeeManagerPage from '../pages/Fees/FeeManagerPage';
 import PaymentCollectionPage from '../pages/Fees/PaymentCollectionPage';
+import UserManagementPage from '../pages/Admin/UserManagementPage';
 
 // Component bảo vệ (Giả lập)
 const PrivateRoute = ({ children }) => {
@@ -29,6 +30,7 @@ const AppRouter = () => {
                 {/* Khoản thu & Đợt thu */}
                 <Route path="fees" element={<FeeManagerPage />} />
                 <Route path="payments" element={<PaymentCollectionPage />} />
+                <Route path="users" element={<UserManagementPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" />} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Home, Users, Wallet, Calendar, LogOut } from 'lucide-react';
+import { LayoutDashboard, Home, Users, Wallet, Calendar, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext'; // Đảm bảo import đúng đường dẫn
 
 const Sidebar = () => {
@@ -19,6 +19,7 @@ const Sidebar = () => {
         { path: '/residents', icon: Users, label: 'Nhân khẩu' },
         { path: '/fees', icon: Wallet, label: 'Khoản thu' },
         { path: '/payments', icon: Calendar, label: 'Đợt thu' },
+        { path: '/users', icon: Shield, label: 'Quản lý người dùng' },
     ];
 
     return (
