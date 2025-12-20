@@ -7,7 +7,8 @@ import LoginPage from './pages/Auth/LoginPage';
 // import DashboardPage from './pages/Dashboard/DashboardPage'; // Placeholder
 //import FeeManagerPage from './pages/Fees/FeeManagerPage.jsx';
 //import HouseholdPage from './pages/Household/HouseholdPage.jsx';
-import TestAddPaymentSession from './pages/PaymentSessions/AddPaymentSessionModal.jsx';
+import TestEditFeeModal from './pages/Fees/EditFeeModal.jsx';
+import TestDeleteFeeModal from './pages/Fees/DeleteFeeModal.jsx';
 import TestForm from './pages/Fees/AddFeeModal.jsx';
 import Dashboard from './pages/Dashboard/DashboardPage.jsx';
 import HouseholdPage from './pages/Household/HouseholdPage.jsx';
