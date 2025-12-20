@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+<<<<<<< HEAD
 
 const FeeManagerPage = ({ onClose }) => {
     // 1. Sử dụng state để lưu trữ dữ liệu người dùng nhập
@@ -83,6 +84,15 @@ const FeeManagerPage = ({ onClose }) => {
                     <button type="submit" className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">Lưu Khoản Thu</button>
                 </div>
             </form>
+=======
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
+
+const FeeManagerPage = () => {
+    // Copy code từ KhoanThuPage.tsx
+    return (
+        <div className="space-y-6">
+            {/* ... JSX của KhoanThuPage */}
+>>>>>>> 0065ccca4c0ae4d9c52a214c033a3e37a58419da
         </div>
     );
 };

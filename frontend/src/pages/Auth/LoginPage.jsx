@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 //npm install lucide-react
@@ -14,6 +15,7 @@ const LoginPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
         const result = await login(username, password);
         if (result.success) {
             navigate('/');

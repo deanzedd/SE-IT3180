@@ -10,8 +10,7 @@ import LoginPage from './pages/Auth/LoginPage';
 import TestAddPaymentSession from './pages/PaymentSessions/AddPaymentSessionModal.jsx';
 import TestForm from './pages/Fees/AddFeeModal.jsx';
 import Dashboard from './pages/Dashboard/DashboardPage.jsx';
-
-// [NEW] Component Layout chung cho các trang nội bộ
+import HouseholdPage from './pages/Household/HouseholdPage.jsx';
 const DashboardLayout = ({ children }) => {
     // Đây sẽ là nơi bạn đặt Sidebar, Header, Footer...
     // Tạm thời dùng div đơn giản để tránh import component MainLayout
@@ -52,8 +51,8 @@ function App() {
                                         {/* ROUTE QUẢN LÝ KHOẢN THU */}
                                         {/*<Route path="/fees" element={<FeeManagerPage />} /*}
                                         
-                                        {/* ROUTE QUẢN LÝ HỘ KHẨU */}
-                                        {/* <Route path="/household" element={<HouseholdPage />} /> */}
+
+                                        
 
                                         {/* Bạn có thể thêm nhiều route con khác tại đây */}
                                         {/* <Route path="/sessions" element={<PaymentSessionPage />} /> */}
