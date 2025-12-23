@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Search, User, Shield, Eye } from 'lucide-react';
-
+import SearchBar from '../../components/common/SearchBar';
+import Table from '../../components/common/Table';
 const UserManagementPage = () => {
     const [nguoiDungs, setNguoiDungs] = useState([
         {
@@ -55,6 +56,45 @@ const UserManagementPage = () => {
         },
     ]);
 
+    const tableHeaders = [
+        { label: 'Họ và tên', className: 'text-left'},
+        { label: 'Vai trò', className: 'text-left'},
+        { label: 'Thao tác', className: 'text-right'}
+    ];
+
+    const renderUserRow = (nguoiDung) => (
+        <tr key={nguoiDung.id} className="hover:bg-gray-50 transition-colors">
+            <td className="px-6 py-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
+                        <User className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div className="min-w-0"> {/* Tránh tràn text nếu tên quá dài */}
+                        <p className="text-gray-800 font-medium truncate">{nguoiDung.hoTen}</p>
+                        <p className="text-gray-500 text-xs truncate">{nguoiDung.email}</p>
+                    </div>
+                </div>
+            </td>
+            <td className="px-6 py-4">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getVaiTroColor(nguoiDung.vaiTro)}`}>
+                    {getVaiTroLabel(nguoiDung.vaiTro)}
+                </span>
+            </td>
+            <td className="px-6 py-4">
+                <div className="flex gap-2 justify-end">
+                    <button onClick={() => handleView(nguoiDung)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors" title="Chi tiết">
+                        <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleEdit(nguoiDung)} className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors" title="Sửa">
+                        <Edit className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(nguoiDung.id)} className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors" title="Xóa">
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
     const [showModal, setShowModal] = useState(false);
     const [editingNguoiDung, setEditingNguoiDung] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -233,43 +273,37 @@ const UserManagementPage = () => {
                 </button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* <div className="flex items-center gap-3">
+                    <div className={`bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center`}>
+                        <HomeIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-gray-600 text-sm">Tổng số căn hộ</p>
+                        <p className="text-gray-900 font-bold">{totalApartments}</p>
+                    </div>
+                </div> */}
                 {stats.map((stat, index) => {
                     const Icon = stat.icon;
                     return (
-                        <div key={index} className="bg-white rounded-xl shadow-sm border p-4">
-                            <div className="flex items-center gap-3">
-                                <div className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
-                                    <Icon className="w-6 h-6 text-white" />
-                                </div>
-                                <div>
-                                    <p className="text-gray-600 text-sm">{stat.label}</p>
-                                    <p className="text-gray-900 font-bold">{stat.value}</p>
-                                </div>
+                        <div className="flex items-center gap-3">
+                            <div className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
+                                <Icon className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-gray-600 text-sm">{stat.label}</p>
+                                <p className="text-gray-900 font-bold">{stat.value}</p>
                             </div>
                         </div>
                     );
                 })}
-            </div>
-
-            {/* Search & Filter */}
-            <div className="bg-white rounded-xl shadow-sm border p-4">
-                <div className="space-y-4">
-                    {/* Search Bar */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Tìm kiếm theo tên, tên đăng nhập, email..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                    </div>
-
-                    {/* Filter Checkboxes */}
-                    <div className="flex flex-wrap gap-6">
+                <div className="flex-1 max-w-md">
+                    <SearchBar 
+                        searchTerm={searchTerm} 
+                        setSearchTerm={setSearchTerm} 
+                        placeholder="Tìm kiếm theo tên, tên đăng nhập, email..."
+                    />
+                    <div className="flex flex-wrap px-5 gap-6">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
@@ -297,6 +331,7 @@ const UserManagementPage = () => {
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
+                                id='checkbox1'
                                 checked={filterVaiTro.ketoan}
                                 onChange={(e) =>
                                     setFilterVaiTro({ ...filterVaiTro, ketoan: e.target.checked })
@@ -308,77 +343,19 @@ const UserManagementPage = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Table */}
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-gray-700 font-semibold">Họ và tên</th>
-                                <th className="px-6 py-3 text-left text-gray-700 font-semibold">Vai trò</th>
-                                <th className="px-6 py-3 text-right text-gray-700 font-semibold">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {filteredNguoiDungs.length > 0 ? (
-                                filteredNguoiDungs.map((nguoiDung) => (
-                                    <tr key={nguoiDung.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                                                    <User className="w-5 h-5 text-indigo-600" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-800 font-medium">{nguoiDung.hoTen}</p>
-                                                    <p className="text-gray-500 text-xs">{nguoiDung.email}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getVaiTroColor(nguoiDung.vaiTro)}`}>
-                                                {getVaiTroLabel(nguoiDung.vaiTro)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex gap-2 justify-end">
-                                                <button
-                                                    onClick={() => handleView(nguoiDung)}
-                                                    className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
-                                                    title="Chi tiết"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleEdit(nguoiDung)}
-                                                    className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                                                    title="Sửa"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(nguoiDung.id)}
-                                                    className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                                                    title="Xóa"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
-                                        Không tìm thấy người dùng nào
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            
+            <div className="mt-6">
+                <Table 
+                    headers={tableHeaders} 
+                    data={filteredNguoiDungs} 
+                    renderRow={renderUserRow}
+                    footerText={
+                        <>
+                            Kết quá gồm: <span className="font-bold text-gray-700">{filteredNguoiDungs.length}</span> người dùng
+                        </>
+                    }
+                />
             </div>
-
             {/* View Detail Modal */}
             {viewingNguoiDung && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

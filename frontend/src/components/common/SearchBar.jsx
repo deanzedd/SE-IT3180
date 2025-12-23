@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 
 const SearchBar = ({ searchTerm, setSearchTerm, placeholder }) => {
     return (
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-3 border-gray-100">
             <div className="relative"> {/* Giới hạn độ rộng để thanh search không quá dài */}
                 <Search 
                     className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" size={18} 

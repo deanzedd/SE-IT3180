@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, DollarSignIcon } from 'lucide-react';
 import Modal from '../../components/common/Modal'; // Import Modal chung
-
+import SearchBar from '../../components/common/SearchBar';
+import Table from '../../components/common/Table';
 const initialFees = [
     { id: 1, name: 'Phí quản lý', type: 'Cố định', amount: '15,000đ', unit: 'Theo m²/tháng', description: 'Phí quản lý chung cư hàng tháng' },
     { id: 2, name: 'Phí dịch vụ', type: 'Cố định', amount: '8,000đ', unit: 'Theo m²/tháng', description: 'Phí dịch vụ chung' },
@@ -17,6 +18,54 @@ const FeeManagerPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingFee, setEditingFee] = useState(null);
 
+    const tableHeaders = [
+        { label: 'Tên khoản thu', className: 'text-left'},
+        { label: 'Loại', className: 'text-left'},
+        { label: 'Số tiền', className: 'text-left'},
+        { label: 'Đơn vị', className: 'text-left'},
+        { label: 'Mô tả', className: 'text-left'},
+        { label: 'Thao tác', className: 'text-right'}
+    ];
+
+    const renderFeeRow = (fee) => (
+        <tr key={fee.id} className="hover:bg-gray-50 transition-colors">
+            <td className="py-4 px-6 font-medium text-gray-900">{fee.name}</td>
+            <td className="py-4 px-6">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    fee.type === 'Cố định'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-purple-100 text-purple-700'
+                }`}>
+                    {fee.type}
+                </span>
+            </td>
+            <td className="py-4 px-6 text-gray-600">
+                {fee.amount}
+            </td>
+            <td className="py-4 px-6 text-gray-600">{fee.unit}</td>
+            <td className="py-4 px-6 text-gray-500 max-w-xs truncate" title={fee.description}>
+                {fee.description}
+            </td>
+            <td className="py-4 px-6">
+                <div className="flex gap-3 justify-end">
+                    <button
+                        onClick={() => handleOpenModal(fee)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Sửa"
+                    >
+                        <Edit size={18} />
+                    </button>
+                    <button
+                        onClick={() => handleDelete(fee.id)}
+                        className="text-gray-400 hover:text-red-600 transition-colors"
+                        title="Xóa"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
     const [formData, setFormData] = useState({
         name: '',
         type: 'Cố định',
@@ -93,81 +142,35 @@ const FeeManagerPage = () => {
                     Thêm khoản thu
                 </button>
             </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                {/* Search Bar */}
-                <div className="p-4 border-b border-gray-100">
-                    <div className="relative max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                            placeholder="Tìm kiếm khoản thu..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                        />
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className={`bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center`}>
+                        <DollarSignIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-gray-600 text-sm">Tổng số khoản phí</p>
+                        <p className="text-gray-900 font-bold">{initialFees.length}</p>
                     </div>
                 </div>
-
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th className="text-left py-4 px-6 font-medium text-gray-700">Tên khoản thu</th>
-                                <th className="text-left py-4 px-6 font-medium text-gray-700">Loại</th>
-                                <th className="text-left py-4 px-6 font-medium text-gray-700">Số tiền</th>
-                                <th className="text-left py-4 px-6 font-medium text-gray-700">Đơn vị</th>
-                                <th className="text-left py-4 px-6 font-medium text-gray-700">Mô tả</th>
-                                <th className="text-left py-4 px-6 font-medium text-gray-700">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {filteredFees.map((fee) => (
-                                <tr key={fee.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="py-4 px-6 font-medium text-gray-900">{fee.name}</td>
-                                    <td className="py-4 px-6">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${fee.type === 'Cố định'
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : 'bg-purple-100 text-purple-700'
-                                            }`}>
-                                            {fee.type}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 px-6 text-gray-600">{fee.amount}</td>
-                                    <td className="py-4 px-6 text-gray-600">{fee.unit}</td>
-                                    <td className="py-4 px-6 text-gray-500 max-w-xs truncate" title={fee.description}>
-                                        {fee.description}
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <div className="flex gap-3">
-                                            <button
-                                                onClick={() => handleOpenModal(fee)}
-                                                className="text-gray-400 hover:text-blue-600 transition-colors"
-                                                title="Sửa"
-                                            >
-                                                <Edit size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(fee.id)}
-                                                className="text-gray-400 hover:text-red-600 transition-colors"
-                                                title="Xóa"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredFees.length === 0 && (
-                                <tr>
-                                    <td colSpan="6" className="text-center py-8 text-gray-500">
-                                        Không tìm thấy khoản thu nào phù hợp.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="flex-1 max-w-md">
+                    <SearchBar 
+                        searchTerm={searchTerm} 
+                        setSearchTerm={setSearchTerm} 
+                        placeholder="Tìm kiếm khoản thu..."
+                    />
                 </div>
+            </div>
+            <div className="mt-6">
+                <Table 
+                    headers={tableHeaders} 
+                    data={filteredFees} 
+                    renderRow={renderFeeRow}
+                    footerText={
+                        <>
+                            Kết quả gồm: <span className="font-bold text-gray-700">{filteredFees.length}</span> khoản thu
+                        </>
+                    }
+                />
             </div>
 
             {/* Modal Form */}

@@ -4,6 +4,7 @@ import { Plus, Edit, Trash2, Search, User, Home as HomeIcon, X } from 'lucide-re
 import Modal from '../../components/common/Modal';
 import {Button} from '../../components/common/Button.jsx';
 import SearchBar from '../../components/common/SearchBar.jsx';
+import Table from '../../components/common/Table.jsx';
 const initialHouseholds = [
     { id: 1, apartment: 'A101', owner: 'Nguyễn Văn A', phone: '0901234567', area: 85, members: 3, moveInDate: '01/01/2020', vehicles: { motorcycles: 2, cars: 1 }, status: 'Đang ở' },
     { id: 2, apartment: 'A202', owner: 'Trần Thị B', phone: '0901234568', area: 92, members: 1, moveInDate: '15/06/2021', vehicles: { motorcycles: 1, cars: 0 }, status: 'Đang ở' },
@@ -21,6 +22,53 @@ const HouseholdPage = () => {
     const [formData, setFormData] = useState({
         apartment: '', owner: '', phone: '', area: '', members: '', moveInDate: '', motorcycles: '0', cars: '0', status: 'Đang ở'
     });
+
+    const tableHeaders = [
+        { label: 'Căn hộ', className: 'text-left'},
+        { label: 'Chủ hộ', className: 'text-left'},
+        { label: 'Số ĐT', className: 'text-left'},
+        { label: 'Diện tích', className: 'text-left'},
+        { label: 'Thành viên', className: 'text-left'},
+        { label: 'Xe cộ (Máy/Ô tô)', className: 'text-left'},
+        { label: 'Trạng thái', className: 'text-left' },
+        { label: 'Thao tác', className: 'text-left' }
+    ];
+
+    const renderHouseholdRow = (household, index) => (
+        <tr key={household.id || index} className="hover:bg-gray-50 transition-colors">
+            <td className="py-4 px-6">
+                <span className="inline-block text-center w-16 px-3 py-1 bg-blue-500 text-white rounded-lg font-medium text-sm">
+                    {household.apartment}
+                </span>
+            </td>
+            <td className="text-left py-4 px-6">{household.owner}</td>
+            <td className="text-left py-4 px-6">{household.phone}</td>
+            <td className="text-left py-4 px-6">{household.area}m²</td>
+            <td className="text-left py-4 px-6">{household.members}</td>
+            <td className="text-left py-4 px-6">
+                {household.vehicles.motorcycles} / {household.vehicles.cars}
+            </td>
+            <td className="text-left py-4 px-6">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    household.status === 'Đang ở' 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-gray-100 text-gray-600'
+                }`}>
+                    {household.status}
+                </span>
+            </td>
+            <td className="py-4 px-6">
+                <div className="flex gap-3">
+                    <button onClick={() => handleEdit(household)} className="flex items-center justify-center w-7 h-7 rounded-md text-blue-400 hover:text-blue-600 hover:bg-radial from-white to-blue-200 transition-colors">
+                        <Edit size={18} />
+                    </button>
+                    <button onClick={() => handleDelete(household.id)} className="flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-radial from-white to-red-200 transition-colors">
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
 
     const filteredHouseholds = households.filter(household =>
         household.apartment.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -103,7 +151,7 @@ const HouseholdPage = () => {
                     Thêm hộ khẩu
                 </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {stats.map((stat, index) => {
                     const Icon = stat.icon;
                     return (
@@ -120,69 +168,36 @@ const HouseholdPage = () => {
                         </div>
                     );
                 })}
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <SearchBar 
-                    searchTerm={searchTerm} 
-                    setSearchTerm={setSearchTerm} 
-                    placeholder="Tìm kiếm theo căn hộ, chủ hộ hoặc SĐT..."
-                />
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden border-gray-200">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th className="text-left py-4 px-6">Căn hộ</th>
-                                <th className="text-left py-4 px-6">Chủ hộ</th>
-                                <th className="text-left py-4 px-6">Số ĐT</th>
-                                <th className="text-left py-4 px-6">Diện tích</th>
-                                <th className="text-center py-4 px-6">Thành viên</th>
-                                <th className="text-left py-4 px-6">Xe cộ (Xe máy/Ô tô)</th>
-                                <th className="text-left py-4 px-6">Trạng thái</th>
-                                <th className="text-left py-4 px-6">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {filteredHouseholds.map((household) => (
-                                <tr key={household.id} className="hover:bg-white/5 transition-colors">
-                                    <td className="py-4 px-6">
-                                        <span className="inline-block text-center w-15 px-3 py-1 bg-blue-500 text-white rounded-lg font-medium text-sm border border-blue-500">
-                                            {household.apartment}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 px-6 font-medium">{household.owner}</td>
-                                    <td className="py-4 px-6">{household.phone}</td>
-                                    <td className="py-4 px-6">{household.area}m²</td>
-                                    <td className="py-4 px-6 text-center">{household.members}</td>
-                                    <td className="py-4 px-6">
-                                        <div className="text-sm">
-                                            {household.vehicles.motorcycles} / {household.vehicles.cars}
-                                        </div>
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${household.status === 'Đang ở'
-                                                ? 'bg-green-500 text-white border-green-500'
-                                                : 'bg-gray-500 text-white border-gray-300'
-                                            }`}>
-                                            {household.status}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <div className="flex gap-3">
-                                            <button onClick={() => handleOpenModal(household)} className="text-blue-400 hover:text-blue-300 transition-colors">
-                                                <Edit size={18} />
-                                            </button>
-                                            <button onClick={() => handleDelete(household.id)} className="text-red-400 hover:text-red-300 transition-colors">
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            </div> */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className={`bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center`}>
+                        <HomeIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-gray-600 text-sm">Tổng số căn hộ</p>
+                        <p className="text-gray-900 font-bold">{totalApartments}</p>
+                    </div>
                 </div>
+                <div className="flex-1 max-w-md">
+                    <SearchBar 
+                        searchTerm={searchTerm} 
+                        setSearchTerm={setSearchTerm} 
+                        placeholder="Tìm kiếm theo căn hộ, chủ hộ hoặc SĐT..."
+                    />
+                </div>
+            </div>
+            <div>
+                <Table 
+                    headers={tableHeaders} 
+                    data={filteredHouseholds} // mảng dữ liệu đã qua xử lý Search
+                    renderRow={renderHouseholdRow} 
+                    footerText={
+                    <>
+                        Kết quả gồm: <span className="font-bold text-gray-700">{filteredHouseholds.length}</span> căn hộ
+                    </>
+                }
+                />
             </div>
             
         </div>

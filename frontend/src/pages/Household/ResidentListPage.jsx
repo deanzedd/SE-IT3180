@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Filter, User} from 'lucide-react';
 import ContentWrapper from '../../components/layout/ContentWrapper';
 import Modal from '../../components/common/Modal';
-import { Button } from '../../components/common/Button';
+import { Button } from '../../components/common/Button'; 
+import SearchBar from '../../components/common/SearchBar';
+import Table from '../../components/common/Table';
+
 const initialResidents = [
     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
     { id: 2, name: 'Nguyễn Thị B', idCard: '001234567891', birthDate: '20/08/1985', gender: 'Nữ', phone: '0901234568', apartment: 'A101', relationship: 'Vợ/Chồng', moveInDate: '01/01/2020' },
@@ -24,6 +27,48 @@ const ResidentListPage = () => {
         resident.apartment.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const tableHeaders = [
+        { label: 'Họ và tên', className: 'text-left'},
+        { label: 'CMND/CCCD', className: 'text-left'},
+        { label: 'Ngày sinh', className: 'text-left'},
+        { label: 'Giới tính', className: 'text-left'},
+        { label: 'Số ĐT', className: 'text-left'},
+        { label: 'Căn hộ', className: 'text-left'},
+        { label: 'Quan hệ', className: 'text-left'},
+        { label: 'Thao tác', className: 'text-left'}
+    ];
+
+    const renderResidentRow = (resident) => (
+        <tr key={resident.id} className="hover:bg-gray-50 transition-colors">
+            <td className="py-4 px-6 font-semibold text-gray-900">{resident.name}</td>
+            <td className="py-4 px-6 text-gray-600">{resident.idCard}</td>
+            <td className="py-4 px-6 text-gray-600">{resident.birthDate}</td>
+            <td className="py-4 px-6 text-gray-600">{resident.gender}</td>
+            <td className="py-4 px-6 text-gray-600">{resident.phone || '-'}</td>
+            <td className="py-4 px-6">
+                <span className="inline-block text-center w-16 px-3 py-1 bg-blue-500 text-white rounded-lg font-medium text-sm">
+                    {resident.apartment}
+                </span>
+            </td>
+            <td className="py-4 px-6">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    resident.relationship === 'Chủ hộ' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                    {resident.relationship}
+                </span>
+            </td>
+            <td className="py-4 px-6">
+                <div className="flex gap-3">
+                    <button onClick={() => handleOpenModal(resident)} className="text-blue-500 hover:text-blue-700 transition-colors">
+                        <Edit size={18} />
+                    </button>
+                    <button onClick={() => handleDelete(resident.id)} className="text-red-500 hover:text-red-700 transition-colors">
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
     const handleOpenModal = (resident = null) => {
         if (resident) {
             setEditingResident(resident);
@@ -65,6 +110,36 @@ const ResidentListPage = () => {
                     <Plus className="w-5 h-5" />
                     Thêm nhân khẩu
                 </Button>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className={`bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center`}>
+                        <User className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-gray-600 text-sm">Tổng số cư dân</p>
+                        <p className="text-gray-900 font-bold">{initialResidents.length}</p>
+                    </div>
+                </div>
+                <div className="flex-1 max-w-md">
+                    <SearchBar 
+                        searchTerm={searchTerm} 
+                        setSearchTerm={setSearchTerm} 
+                        placeholder="Tìm kiếm theo tên, CMND hoặc căn hộ..."
+                    />
+                </div>
+            </div>
+            <div>
+                <Table 
+                    headers={tableHeaders} 
+                    data={filteredResidents} 
+                    renderRow={renderResidentRow} 
+                    footerText={
+                        <>
+                            Kết quả gồm: <span className="font-bold text-gray-700">{filteredResidents.length}</span> cư dân
+                        </>
+                    }
+                />
             </div>
         </div>
         // // 1. ĐÃ SỬA: Bọc bằng ContentWrapper
