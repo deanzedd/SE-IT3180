@@ -9,7 +9,8 @@ import {
     UserCog,
     Building,
     LayoutDashboard,
-    CalendarCheck
+    CalendarCheck,
+    LogOut
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -73,7 +74,7 @@ const Sidebar = () => {
                 <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl p-2 mr-3 text-white shadow-lg shadow-blue-200">
                     <Building size={24} />
                 </span>
-                <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                     BlueMoon
                 </span>
             </h2>
@@ -102,7 +103,7 @@ const Sidebar = () => {
             </ul>
 
             {/* USER & LOGOUT */}
-            <div className="mt-auto pt-6 border-t border-gray-100">
+            <div className="mt-auto pt-6 border-t border-gray-100 flex flex-col items-center">
                 <div className="flex items-center gap-3 mb-4 px-2">
                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold border border-gray-200">
                         {user?.fullName?.charAt(0) || 'U'}
@@ -114,9 +115,9 @@ const Sidebar = () => {
                 </div>
                 <Button
                     onClick={handleLogout}
-                    className="w-full border border-red-200 bg-white text-red-500 hover:bg-gradient-to-r hover:from-red-500 hover:to-orange-500 hover:text-white hover:shadow-lg hover:shadow-red-200 transition-all rounded-xl py-3 font-semibold"
+                    className="bg-linear-to-r from-red-500 to-orange-500"
                 >
-                    Đăng xuất
+                    <LogOut className="w-5 h-5 mr-2"/>Đăng xuất
                 </Button>
             </div>
         </div>

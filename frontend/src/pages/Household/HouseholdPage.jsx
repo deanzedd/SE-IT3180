@@ -59,7 +59,7 @@ const HouseholdPage = () => {
             </td>
             <td className="py-4 px-6">
                 <div className="flex gap-3">
-                    <button onClick={() => handleEdit(household)} className="flex items-center justify-center w-7 h-7 rounded-md text-blue-400 hover:text-blue-600 hover:bg-radial from-white to-blue-200 transition-colors">
+                    <button onClick={() => handleOpenModal(household)} className="flex items-center justify-center w-7 h-7 rounded-md text-blue-400 hover:text-blue-600 hover:bg-radial from-white to-blue-200 transition-colors">
                         <Edit size={18} />
                     </button>
                     <button onClick={() => handleDelete(household.id)} className="flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-radial from-white to-red-200 transition-colors">
@@ -145,6 +145,7 @@ const HouseholdPage = () => {
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Quản lý hộ khẩu</h2>
                 </div>
                 <Button
+                    onClick={() => handleOpenModal()}
                     className="bg-linear-to-r from-blue-500 to-cyan-500"
                 >
                     <Plus className="w-5 h-5" />
@@ -200,10 +201,84 @@ const HouseholdPage = () => {
                 />
             </div>
             
+
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+                <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">
+                        {editingHousehold ? 'Chỉnh sửa hộ khẩu' : 'Thêm hộ khẩu mới'}
+                    </h3>
+                    {/* Form content giữ nguyên như cũ vì Modal thường nền trắng */}
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Copy lại nội dung Form từ code cũ của bạn vào đây */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Căn hộ</label>
+                                <input value={formData.apartment} onChange={(e) => setFormData({ ...formData, apartment: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Diện tích (m²)</label>
+                                <input type="number" value={formData.area} onChange={(e) => setFormData({ ...formData, area: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                        </div>
+                        {/* ... Các trường còn lại ... Giữ nguyên logic form */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Chủ hộ</label>
+                                <input value={formData.owner} onChange={(e) => setFormData({ ...formData, owner: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                                <input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Thành viên</label>
+                                <input type="number" value={formData.members} onChange={(e) => setFormData({ ...formData, members: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày vào</label>
+                                <input value={formData.moveInDate} onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Xe máy</label>
+                                <input type="number" value={formData.motorcycles} onChange={(e) => setFormData({ ...formData, motorcycles: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Ô tô</label>
+                                <input type="number" value={formData.cars} onChange={(e) => setFormData({ ...formData, cars: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+                            <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <option value="Đang ở">Đang ở</option>
+                                <option value="Trống">Trống</option>
+                            </select>
+                        </div>
+                        <div className="flex gap-4 pt-6 mt-6 border-t border-gray-100">
+                            <Button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 bg-gray-300 font-bold hover:bg-gray-500 transition-all"
+                            >
+                                Hủy
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="flex-1 bg-linear-to-r from-blue-500 to-cyan-500 font-bold shadow-lg shadow-blue-200 transition-all"
+                            >
+                                {editingHousehold ? 'Cập nhật' : 'Thêm'}
+                            </Button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
         </div>
 
 
-        // </div>
         //     {/* Main Content Card - Đã sửa style */}
         //     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-sm">
         //         {/* Search Bar */}

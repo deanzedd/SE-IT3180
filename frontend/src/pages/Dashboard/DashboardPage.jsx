@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import bgImage from '../../assets/images/background.jpg';
-import { DollarSign, Users, Home, TrendingUp } from 'lucide-react';
+import { DollarSign, Users, Home, TrendingUp} from 'lucide-react';
 // 1. ĐÃ XÓA: import Sidebar... (Không cần nữa vì MainLayout đã lo rồi)
 
 const Dashboard = () => {
@@ -32,11 +32,6 @@ const Dashboard = () => {
                     </h1>
 
                     <div className="space-y-2">
-                        <p className="text-2xl font-medium text-gray-200">
-                            Vai trò: <span className="px-3 py-1 bg-blue-300 shadow-2xl border-white/20 border rounded-lg text-white text-xl">
-                                {user?.role === 'admin' ? 'Quản trị viên' : 'Quản lý'}
-                            </span>
-                        </p>
                         <p className="text-white mt-6 max-w-md italic">
                             Chào mừng bạn quay trở lại với hệ thống quản lý chung cư BlueMoon.
                             Hãy chọn các chức năng ở thanh menu bên trái để bắt đầu làm việc.

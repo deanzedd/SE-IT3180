@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Search, User, Shield, Eye } from 'lucide-react';
 import SearchBar from '../../components/common/SearchBar';
 import Table from '../../components/common/Table';
+import {Button} from '../../components/common/Button';
+import Modal from '../../components/common/Modal';
 const UserManagementPage = () => {
     const [nguoiDungs, setNguoiDungs] = useState([
         {
@@ -82,9 +84,9 @@ const UserManagementPage = () => {
             </td>
             <td className="px-6 py-4">
                 <div className="flex gap-2 justify-end">
-                    <button onClick={() => handleView(nguoiDung)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors" title="Chi tiết">
+                    {/* <button onClick={() => handleView(nguoiDung)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors" title="Chi tiết">
                         <Eye className="w-4 h-4" />
-                    </button>
+                    </button> */}
                     <button onClick={() => handleEdit(nguoiDung)} className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors" title="Sửa">
                         <Edit className="w-4 h-4" />
                     </button>
@@ -264,13 +266,13 @@ const UserManagementPage = () => {
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Quản lý người dùng</h2>
                 </div>
-                <button
+                <Button
                     onClick={handleAdd}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="w-fit bg-linear-to-r from-blue-500 to-cyan-500"
                 >
                     <Plus className="w-5 h-5" />
                     Thêm người dùng
-                </button>
+                </Button>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -356,18 +358,12 @@ const UserManagementPage = () => {
                     }
                 />
             </div>
-            {/* View Detail Modal */}
-            {viewingNguoiDung && (
+            {/* View Detail Modal, TẠM BỎ*/}
+            {/* {viewingNguoiDung && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-bold text-gray-900">Chi tiết người dùng</h3>
-                            <button
-                                onClick={() => setViewingNguoiDung(null)}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                ✖
-                            </button>
                         </div>
 
                         <div className="space-y-4">
@@ -434,11 +430,11 @@ const UserManagementPage = () => {
                         </button>
                     </div>
                 </div>
-            )}
+            )} */}
 
             {/* Edit/Add Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
                     <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
                         <h3 className="text-lg font-bold text-gray-900 mb-6">
                             {editingNguoiDung ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
@@ -558,7 +554,7 @@ const UserManagementPage = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

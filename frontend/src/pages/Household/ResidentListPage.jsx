@@ -105,6 +105,7 @@ const ResidentListPage = () => {
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Quản lý nhân khẩu</h2>
                 </div>
                 <Button
+                    onClick={() => handleOpenModal()}
                     className="bg-linear-to-r from-blue-500 to-cyan-500"
                 >
                     <Plus className="w-5 h-5" />
@@ -141,6 +142,62 @@ const ResidentListPage = () => {
                     }
                 />
             </div>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+                <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6">
+                        {editingResident ? 'Chỉnh sửa nhân khẩu' : 'Thêm nhân khẩu mới'}
+                    </h3>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Form Content giữ nguyên như code cũ, tôi chỉ rút gọn để hiển thị logic wrap */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Họ tên</label><input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">CMND</label><input value={formData.idCard} onChange={(e) => setFormData({ ...formData, idCard: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label><input value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
+                                <select value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="Nam">Nam</option><option value="Nữ">Nữ</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">SĐT</label><input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Căn hộ</label><input value={formData.apartment} onChange={(e) => setFormData({ ...formData, apartment: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Quan hệ</label>
+                                <select value={formData.relationship} onChange={(e) => setFormData({ ...formData, relationship: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="Chủ hộ">Chủ hộ</option><option value="Vợ/Chồng">Vợ/Chồng</option><option value="Con">Con</option><option value="Bố/Mẹ">Bố/Mẹ</option>
+                                </select>
+                            </div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày vào</label><input value={formData.moveInDate} onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+                        </div>
+
+                        {/* <div className="flex gap-3 justify-end pt-4 border-t mt-6">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-lg">Hủy</button>
+                            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg">Lưu</button>
+                        </div> */}
+                        <div className="flex gap-4 pt-6 mt-6 border-t border-gray-100">
+                            <Button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 bg-gray-300 font-bold hover:bg-gray-500 transition-all"
+                            >
+                                Hủy
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="flex-1 bg-linear-to-r from-blue-500 to-cyan-500 font-bold shadow-lg shadow-blue-200 transition-all"
+                            >
+                                {editingResident ? 'Cập nhật' : 'Thêm'}
+                            </Button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
         </div>
         // // 1. ĐÃ SỬA: Bọc bằng ContentWrapper
         // <ContentWrapper title="Quản lý Nhân Khẩu">
@@ -223,47 +280,7 @@ const ResidentListPage = () => {
         //     </div>
 
         //     {/* Modal Form */}
-        //     <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        //         <div className="p-6">
-        //             <h3 className="text-xl font-bold text-gray-900 mb-6">
-        //                 {editingResident ? 'Chỉnh sửa nhân khẩu' : 'Thêm nhân khẩu mới'}
-        //             </h3>
-        //             <form onSubmit={handleSubmit} className="space-y-4">
-        //                 {/* Form Content giữ nguyên như code cũ, tôi chỉ rút gọn để hiển thị logic wrap */}
-        //                 <div className="grid grid-cols-2 gap-4">
-        //                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Họ tên</label><input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required /></div>
-        //                     <div><label className="block text-sm font-medium text-gray-700 mb-1">CMND</label><input value={formData.idCard} onChange={(e) => setFormData({ ...formData, idCard: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required /></div>
-        //                 </div>
-        //                 <div className="grid grid-cols-2 gap-4">
-        //                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label><input value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required /></div>
-        //                     <div>
-        //                         <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
-        //                         <select value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} className="w-full px-4 py-2 border rounded-lg">
-        //                             <option value="Nam">Nam</option><option value="Nữ">Nữ</option>
-        //                         </select>
-        //                     </div>
-        //                 </div>
-        //                 <div className="grid grid-cols-2 gap-4">
-        //                     <div><label className="block text-sm font-medium text-gray-700 mb-1">SĐT</label><input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2 border rounded-lg" /></div>
-        //                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Căn hộ</label><input value={formData.apartment} onChange={(e) => setFormData({ ...formData, apartment: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required /></div>
-        //                 </div>
-        //                 <div className="grid grid-cols-2 gap-4">
-        //                     <div>
-        //                         <label className="block text-sm font-medium text-gray-700 mb-1">Quan hệ</label>
-        //                         <select value={formData.relationship} onChange={(e) => setFormData({ ...formData, relationship: e.target.value })} className="w-full px-4 py-2 border rounded-lg">
-        //                             <option value="Chủ hộ">Chủ hộ</option><option value="Vợ/Chồng">Vợ/Chồng</option><option value="Con">Con</option><option value="Bố/Mẹ">Bố/Mẹ</option>
-        //                         </select>
-        //                     </div>
-        //                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày vào</label><input value={formData.moveInDate} onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" /></div>
-        //                 </div>
 
-        //                 <div className="flex gap-3 justify-end pt-4 border-t mt-6">
-        //                     <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-lg">Hủy</button>
-        //                     <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg">Lưu</button>
-        //                 </div>
-        //             </form>
-        //         </div>
-        //     </Modal>
         // </ContentWrapper>
     );
 };

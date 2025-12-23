@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, X } from 'lucide-react';
 import Modal from '../../components/common/Modal'; // Dùng Modal chung của dự án
-
+import {Button} from '../../components/common/Button';
 const initialCollections = [
     {
         id: 1,
@@ -112,15 +112,14 @@ const PaymentCollectionPage = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900">Quản lý đợt thu</h2>
-                    <p className="text-gray-600">Quản lý các đợt thu phí theo tháng</p>
                 </div>
-                <button
+                <Button
                     onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="bg-linear-to-r from-blue-500 to-cyan-500"
                 >
                     <Plus size={18} />
                     Tạo đợt thu mới
-                </button>
+                </Button>
             </div>
 
             <div className="grid gap-6">

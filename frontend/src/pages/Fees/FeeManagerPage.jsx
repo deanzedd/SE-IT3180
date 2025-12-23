@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2, Search, DollarSignIcon } from 'lucide-react';
 import Modal from '../../components/common/Modal'; // Import Modal chung
 import SearchBar from '../../components/common/SearchBar';
 import Table from '../../components/common/Table';
+import {Button} from '../../components/common/Button';
 const initialFees = [
     { id: 1, name: 'Phí quản lý', type: 'Cố định', amount: '15,000đ', unit: 'Theo m²/tháng', description: 'Phí quản lý chung cư hàng tháng' },
     { id: 2, name: 'Phí dịch vụ', type: 'Cố định', amount: '8,000đ', unit: 'Theo m²/tháng', description: 'Phí dịch vụ chung' },
@@ -131,16 +132,15 @@ const FeeManagerPage = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900">Quản lý khoản thu</h2>
-                    <p className="text-gray-600">Quản lý các loại phí và khoản thu trong chung cư</p>
                 </div>
 
-                <button
+                <Button
                     onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+                    className="bg-linear-to-r from-blue-500 to-cyan-500"
                 >
                     <Plus size={18} />
                     Thêm khoản thu
-                </button>
+                </Button>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -237,8 +237,22 @@ const FeeManagerPage = () => {
                                 placeholder="Mô tả chi tiết về khoản thu này..."
                             />
                         </div>
-
-                        <div className="flex gap-3 justify-end pt-4 border-t mt-6">
+                        <div className="flex gap-4 pt-6 mt-6 border-t border-gray-100">
+                            <Button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 bg-gray-300 font-bold hover:bg-gray-500 transition-all"
+                            >
+                                Hủy
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="flex-1 bg-linear-to-r from-blue-500 to-cyan-500 font-bold shadow-lg shadow-blue-200 transition-all"
+                            >
+                                {editingFee ? 'Cập nhật' : 'Thêm'}
+                            </Button>
+                        </div>
+                        {/* <div className="flex gap-3 justify-end pt-4 border-t mt-6">
                             <button
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}
@@ -252,7 +266,7 @@ const FeeManagerPage = () => {
                             >
                                 {editingFee ? 'Cập nhật' : 'Thêm mới'}
                             </button>
-                        </div>
+                        </div> */}
                     </form>
                 </div>
             </Modal>
