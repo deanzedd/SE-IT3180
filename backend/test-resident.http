@@ -1,0 +1,44 @@
+# File: backend/test_household.http
+
+@host = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MzJiMWQ2MDhkNmVkYjE4OTMwZTI3MiIsImlhdCI6MTc2NDk2MzI1MiwiZXhwIjoxNzY3NTU1MjUyfQ.1pxGsdXMmx2JHTOmaLCuzCM8UJzLHj_p0HYxe135D48
+# LƯU Ý: Thay {{YOUR_AUTH_TOKEN}} bằng token JWT bạn nhận được sau khi Đăng nhập (POST /api/auth/login)
+
+###
+# Yêu cầu: Cần Token xác thực
+GET {{host}}/api/residents
+Authorization: Bearer {{token}}
+
+###
+# Chức năng: createHousehold
+# Yêu cầu: Token xác thực + JSON hợp lệ
+POST {{host}}/api/residents
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "fullName": "Nguyễn Quản Lý",
+    "idNumber": "12345",
+    "household": "6933369e2818821c61ca99bf"
+}
+
+### 3. KIỂM THỬ: Tạo Hộ khẩu thất bại (Số căn hộ bị trùng)
+# Chức năng: createHousehold (Kiểm tra lỗi 400)
+# Yêu cầu: Token xác thực + Số căn hộ đã tồn tại (ví dụ: 101 từ seed script)
+POST {{host}}/api/households
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "apartmentNumber": "101", 
+    "area": 90.0,
+    "ownerName": "Trần Văn Chủ"
+}
+### 
+@householdId = 694d6bd0cf107afa908b6268
+
+DELETE {{host}}/api/households/{{householdId}}
+Authorization: Bearer {{token}}
+
+GET {{host}}/api/households
+Authorization: Bearer {{token}}

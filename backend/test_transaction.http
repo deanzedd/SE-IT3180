@@ -1,0 +1,43 @@
+@host = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MzJiMWQ2MDhkNmVkYjE4OTMwZTI3MiIsImlhdCI6MTc2NDk2MzI1MiwiZXhwIjoxNzY3NTU1MjUyfQ.1pxGsdXMmx2JHTOmaLCuzCM8UJzLHj_p0HYxe135D48
+# THAY THẾ {{YOUR_AUTH_TOKEN}} bằng Token JWT hợp lệ
+
+### --- TEST 1: GHI NHẬN NỘP TIỀN (CREATE) ---
+# Endpoint: POST /api/transactions
+@transactionId = 6933f1aefcedd4dc2a654576
+POST {{host}}/api/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "household": "6933369e2818821c61ca99bf",
+    "paymentSession": "6933eff5fcedd4dc2a6544bb",
+    "amount": 3500000,
+    "payerName": "Phạm Minh - Hộ 101",
+    "method": "cash"
+}
+
+### --- TEST 2: LẤY CHI TIẾT GIAO DỊCH VỪA TẠO (READ by ID) ---
+# Endpoint: GET /api/transactions/:id
+# LƯU Ý: Thay {{transactionId}} bằng ID từ phản hồi TEST 1
+#GET {{host}}/api/transactions/{{transactionId}}
+#Authorization: Bearer {{token}}
+
+### --- TEST 3: SỬA GIAO DỊCH (UPDATE) ---
+# Cập nhật lại số tiền nếu có sai sót trong quá trình nhập liệu
+# Endpoint: PUT /api/transactions/:id
+PUT {{host}}/api/transactions/{{transactionId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "amount": 3499000,
+    "note": "Điều chỉnh do làm tròn"
+}
+
+### --- TEST 4: TRUY VẤN GIAO DỊCH THEO ĐỢT THU ---
+# (Chức năng Thống kê/Truy vấn UC007)
+# Endpoint: GET /api/paymentSession/:sessionId/transactions
+@paymentSessionId = 6933eff5fcedd4dc2a6544bb
+GET {{host}}/api/paymentSessions/{{paymentSessionId}}/transactions
+Authorization: Bearer {{token}}
