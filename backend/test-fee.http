@@ -1,0 +1,63 @@
+@host = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MzJiMWQ2MDhkNmVkYjE4OTMwZTI3MiIsImlhdCI6MTc2NDk2MzI1MiwiZXhwIjoxNzY3NTU1MjUyfQ.1pxGsdXMmx2JHTOmaLCuzCM8UJzLHj_p0HYxe135D48
+# THAY THẾ {{YOUR_AUTH_TOKEN}} bằng Token JWT bạn nhận được sau khi Đăng nhập thành công
+
+### --- KIỂM THỬ 1: LẤY DANH SÁCH KHOẢN THU (GET) ---
+# Endpoint: GET /api/fees
+GET {{host}}/api/fees
+Authorization: Bearer {{token}}
+
+### --- KIỂM THỬ 2: TẠO KHOẢN THU MỚI (CREATE) ---
+# Endpoint: POST /api/fees
+@newFeeId = 
+POST {{host}}/api/fees
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "name": "Phí Dịch vụ Quý 4",
+    "type": "mandatory",
+    "unitPrice": 16500,
+    "unit": "m2",
+    "description": "Phí dịch vụ chung cư tính theo mét vuông"
+}
+
+
+### --- KIỂM THỬ 3: LẤY MỘT KHOẢN THU VỪA TẠO (GET by ID) ---
+# LƯU Ý: Phải copy ID Khoản thu vừa tạo ở bước 2 vào biến @feeIdToUpdate
+@feeIdToEdit = 6933a2556b82f86bb7ee9432
+
+#GET {{host}}/api/fees/{{feeIdToUpdate}}
+#Authorization: Bearer {{token}}
+
+### --- KIỂM THỬ 4: SỬA KHOẢN THU (EDIT) ---
+# Sửa đơn giá từ 16500 thành 15000 và chuyển thành Tự nguyện
+# Endpoint: PUT /api/fees/:id
+PUT {{host}}/api/fees/{{feeIdToEdit}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "name": "Phí Dịch vụ Quý 4 [Ưu đãi]",
+    "type": "voluntary",
+    "unitPrice": 15000,
+    "unit": "m2"
+}
+
+### --- KIỂM THỬ 5: XÓA KHOẢN THU (DELETE) ---
+# Endpoint: DELETE /api/fees/:id
+DELETE {{host}}/api/fees/{{feeIdToEdit}}
+Authorization: Bearer {{token}}
+
+### --- KIỂM THỬ 6: KIỂM TRA LỖI: TẠO KHOẢN THU THIẾU DỮ LIỆU ---
+# Endpoint: POST /api/fees
+POST {{host}}/api/fees
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "name": "Phí Thí nghiệm Lỗi",
+    "type": "mandatory",
+    "unit": "m2"
+    // Thiếu unitPrice
+}

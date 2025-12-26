@@ -20,7 +20,7 @@ const loginUser = async (req, res) => {
             token: generateToken(user._id),
         });
     } else {
-        res.status(401).json({ message: 'Invalid username or password' });
+        res.status(401).json({ message: 'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.' });
     }
 };
 
