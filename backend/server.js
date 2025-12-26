@@ -11,6 +11,7 @@ const householdRoutes = require('./routes/household.routes');
 const feeRoutes = require('./routes/fee.routes');
 const paymentSessionRoutes = require('./routes/paymentSession.routes');
 const transactionRoutes = require('./routes/transaction.routes');
+const residentRoutes = require('./routes/resident.routes');
 
 dotenv.config();
 connectDB();
@@ -27,6 +28,7 @@ app.use('/api/households', householdRoutes);
 app.use('/api/fees', feeRoutes);
 app.use('/api/paymentSessions', paymentSessionRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/residents', residentRoutes);
 
 // Error Handler
 app.use(errorHandler);

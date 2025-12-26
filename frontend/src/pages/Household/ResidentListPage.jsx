@@ -1,30 +1,87 @@
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search, Filter, User } from 'lucide-react';
-//import ContentWrapper from '../../components/layout/ContentWrapper';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Plus, Edit, Trash2, User } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import SearchBar from '../../components/common/SearchBar';
 import Table from '../../components/common/Table';
+import { useAuth } from '../../context/AuthContext';
+import DatePicker from "react-datepicker";
 
-const initialResidents = [
-    { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
-    { id: 2, name: 'Nguyễn Thị B', idCard: '001234567891', birthDate: '20/08/1985', gender: 'Nữ', phone: '0901234568', apartment: 'A101', relationship: 'Vợ/Chồng', moveInDate: '01/01/2020' },
-    { id: 3, name: 'Nguyễn Văn C', idCard: '001234567892', birthDate: '10/03/2010', gender: 'Nam', phone: '', apartment: 'A101', relationship: 'Con', moveInDate: '01/01/2020' },
-    { id: 4, name: 'Trần Thị D', idCard: '001234567893', birthDate: '25/11/1978', gender: 'Nữ', phone: '0901234569', apartment: 'A202', relationship: 'Chủ hộ', moveInDate: '15/06/2021' },
-];
+const API_URL = 'http://localhost:5000/api/residents';
+
+// const initialResidents = [
+//     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
+//     { id: 2, name: 'Nguyễn Thị B', idCard: '001234567891', birthDate: '20/08/1985', gender: 'Nữ', phone: '0901234568', apartment: 'A101', relationship: 'Vợ/Chồng', moveInDate: '01/01/2020' },
+//     { id: 3, name: 'Nguyễn Văn C', idCard: '001234567892', birthDate: '10/03/2010', gender: 'Nam', phone: '', apartment: 'A101', relationship: 'Con', moveInDate: '01/01/2020' },
+//     { id: 4, name: 'Trần Thị D', idCard: '001234567893', birthDate: '25/11/1978', gender: 'Nữ', phone: '0901234569', apartment: 'A202', relationship: 'Chủ hộ', moveInDate: '15/06/2021' },
+// ];
 
 const ResidentListPage = () => {
-    const [residents, setResidents] = useState(initialResidents);
+    const { user } = useAuth();
+    const config = { headers: { Authorization: `Bearer ${user.token}` } };
+    const [residents, setResidents] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingResident, setEditingResident] = useState(null);
+    const [households, setHouseholds] = useState([]);
+    const [aptSearch, setAptSearch] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
-    const [formData, setFormData] = useState({ name: '', idCard: '', birthDate: '', gender: 'Nam', phone: '', apartment: '', relationship: 'Chủ hộ', moveInDate: '' });
+    // Lọc danh sách căn hộ dựa trên số phòng người dùng nhập
+    const suggestedHouseholds = households.filter(h => 
+        h.apartmentNumber.toLowerCase().includes(aptSearch.toLowerCase())
+    ).slice(0, 5); // Chỉ hiện 5 kết quả đầu tiên cho gọn
+    const [formData, setFormData] = useState({
+        fullName: '',
+        idNumber: '',
+        dob: '',
+        gender: 'male',
+        phone: '',
+        household: '', // Đây là ID của hộ khẩu
+        relationToOwner: 'Chủ hộ'
+    });
 
-    const filteredResidents = residents.filter(resident =>
-        resident.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        resident.idCard.includes(searchTerm) ||
-        resident.apartment.toLowerCase().includes(searchTerm.toLowerCase())
+    const fetchData = async () => {
+        if (!user?.token) return; 
+
+        // Định nghĩa config ngay tại đây để đảm bảo token luôn mới nhất
+        const currentConfig = { 
+            headers: { Authorization: `Bearer ${user.token}` } 
+        };
+
+        try {
+            setLoading(true);
+            const [resResidents, resHouseholds] = await Promise.all([
+                axios.get(API_URL, currentConfig),
+                axios.get('http://localhost:5000/api/households', currentConfig)
+            ]);
+
+            // Kiểm tra dữ liệu trả về có phải mảng không trước khi set
+            setResidents(Array.isArray(resResidents.data) ? resResidents.data : []);
+            setHouseholds(Array.isArray(resHouseholds.data) ? resHouseholds.data : []);
+            
+        } catch (error) {
+            console.error("Lỗi khi tải dữ liệu:", error);
+            // Nếu lỗi, trả về mảng rỗng để giao diện không bị crash
+            setResidents([]);
+            setHouseholds([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 2. useEffect gọi dữ liệu
+    useEffect(() => {
+        fetchData();
+    }, [user?.token]);
+
+
+    const filteredResidents = residents?.filter(resident =>
+        (resident.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (resident.idNumber || '').includes(searchTerm) ||
+        (resident.household?.apartmentNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const tableHeaders = [
@@ -39,29 +96,36 @@ const ResidentListPage = () => {
     ];
 
     const renderResidentRow = (resident) => (
-        <tr key={resident.id} className="hover:bg-gray-50 transition-colors">
-            <td className="py-4 px-6 font-semibold text-gray-900">{resident.name}</td>
-            <td className="py-4 px-6 text-gray-600">{resident.idCard}</td>
-            <td className="py-4 px-6 text-gray-600">{resident.birthDate}</td>
-            <td className="py-4 px-6 text-gray-600">{resident.gender}</td>
+        <tr key={resident._id} className="hover:bg-gray-50 transition-colors">
+            <td className="py-4 px-6 font-semibold text-gray-900">{resident.fullName}</td>
+            <td className="py-4 px-6 text-gray-600">{resident.idNumber}</td>
+            <td className="py-4 px-6 text-gray-600">
+                {resident.dob ? new Date(resident.dob).toLocaleDateString('vi-VN') : '-'}
+            </td>
+            <td className="py-4 px-6 text-gray-600">
+                {resident.gender === 'male' ? 'Nam' : resident.gender === 'female' ? 'Nữ' : 'Khác'}
+            </td>
             <td className="py-4 px-6 text-gray-600">{resident.phone || '-'}</td>
             <td className="py-4 px-6">
                 <span className="inline-block text-center w-16 px-3 py-1 bg-blue-500 text-white rounded-lg font-medium text-sm">
-                    {resident.apartment}
+                    {resident.household?.apartmentNumber}
                 </span>
             </td>
             <td className="py-4 px-6">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${resident.relationship === 'Chủ hộ' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${resident.relationToOwner === 'Chủ hộ' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
                     }`}>
-                    {resident.relationship}
+                    {resident.relationToOwner}
                 </span>
             </td>
             <td className="py-4 px-6">
                 <div className="flex gap-3">
-                    <button onClick={() => handleOpenModal(resident)} className="text-blue-500 hover:text-blue-700 transition-colors">
+                    <button onClick={() => {
+                        setAptSearch(resident.household?.apartmentNumber);
+                        handleOpenModal(resident);
+                    } } className="text-blue-500 hover:text-blue-700 transition-colors">
                         <Edit size={18} />
                     </button>
-                    <button onClick={() => handleDelete(resident.id)} className="text-red-500 hover:text-red-700 transition-colors">
+                    <button onClick={() => handleDelete(resident._id)} className="text-red-500 hover:text-red-700 transition-colors">
                         <Trash2 size={18} />
                     </button>
                 </div>
@@ -71,28 +135,52 @@ const ResidentListPage = () => {
     const handleOpenModal = (resident = null) => {
         if (resident) {
             setEditingResident(resident);
-            setFormData({ ...resident });
+            // Convert date từ backend (ISO) sang format input date (YYYY-MM-DD)
+            const formattedDob = resident.dob ? resident.dob.split('T')[0] : '';
+            setFormData({
+                fullName: resident.fullName,
+                idNumber: resident.idNumber,
+                dob: formattedDob,
+                gender: resident.gender,
+                phone: resident.phone || '',
+                household: resident.household?._id || '',
+                relationToOwner: resident.relationToOwner
+            });
         } else {
             setEditingResident(null);
-            setFormData({ name: '', idCard: '', birthDate: '', gender: 'Nam', phone: '', apartment: '', relationship: 'Chủ hộ', moveInDate: '' });
+            setFormData({ fullName: '', idNumber: '', dob: '', gender: 'male', phone: '', household: '', relationToOwner: 'Chủ hộ' });
         }
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingResident) {
-            setResidents(residents.map(resident => resident.id === editingResident.id ? { ...formData, id: editingResident.id } : resident));
-        } else {
-            const newResident = { ...formData, id: Math.max(...residents.map(r => r.id), 0) + 1 };
-            setResidents([...residents, newResident]);
+        try {
+            if (editingResident) {
+                await axios.put(`${API_URL}/${editingResident._id}`, formData, config);
+            } else {
+                await axios.post(API_URL, formData, config);
+            }
+            
+            // Quan trọng: Đợi lấy dữ liệu mới xong rồi mới đóng Modal
+            await fetchData(); 
+            
+            setIsModalOpen(false);
+            setEditingResident(null); // Reset trạng thái chỉnh sửa
+        } catch (error) {
+            console.error("Lỗi khi lưu:", error);
+            alert(error.response?.data?.message || "Có lỗi xảy ra khi lưu dữ liệu");
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('Bạn có chắc chắn muốn xóa nhân khẩu này?')) {
-            setResidents(residents.filter(resident => resident.id !== id));
+            try {
+                await axios.delete(`${API_URL}/${id}`, config);
+                fetchData();
+            } catch (error) {
+                alert("Xóa thất bại ");
+            }
         }
     };
 
@@ -118,7 +206,7 @@ const ResidentListPage = () => {
                     </div>
                     <div>
                         <p className="text-gray-600 text-sm">Tổng số cư dân</p>
-                        <p className="text-gray-900 font-bold">{initialResidents.length}</p>
+                        <p className="text-gray-900 font-bold">{residents?.length}</p>
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
@@ -149,30 +237,80 @@ const ResidentListPage = () => {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Form Content giữ nguyên như code cũ, tôi chỉ rút gọn để hiển thị logic wrap */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Họ tên</label><input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">CMND</label><input value={formData.idCard} onChange={(e) => setFormData({ ...formData, idCard: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Họ tên</label><input value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">CMND</label><input value={formData.idNumber} onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label><input value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
+                                <DatePicker
+                                    selected={formData.dob ? new Date(formData.dob) : null}
+                                    onChange={(date) => setFormData({ ...formData, dob: date })}
+                                    dateFormat="dd/MM/yyyy"
+                                    placeholderText="Chọn ngày sinh"
+                                    showMonthDropdown
+                                    showYearDropdown
+                                    dropdownMode="select"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    required
+                                />
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
                                 <select value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                    <option value="Nam">Nam</option><option value="Nữ">Nữ</option>
+                                    <option value='male'>Nam</option><option value='female'>Nữ</option>
                                 </select>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">SĐT</label><input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Căn hộ</label><input value={formData.apartment} onChange={(e) => setFormData({ ...formData, apartment: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required /></div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Căn hộ</label>
+                                <input
+                                    type="text"
+                                    placeholder="Nhập số phòng (VD: 101)..."
+                                    value={aptSearch}
+                                    onChange={(e) => {
+                                        setAptSearch(e.target.value);
+                                        setShowSuggestions(true);
+                                    }}
+                                    onFocus={() => setShowSuggestions(true)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                                
+                                {/* Danh sách gợi ý đổ xuống */}
+                                {showSuggestions && aptSearch && (
+                                    <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                                        {suggestedHouseholds.length > 0 ? (
+                                            suggestedHouseholds.map(h => (
+                                                <div
+                                                    key={h._id}
+                                                    onClick={() => {
+                                                        setFormData({ ...formData, household: h._id });
+                                                        setAptSearch(h.apartmentNumber);
+                                                        setShowSuggestions(false);
+                                                    }}
+                                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none"
+                                                >
+                                                    <p className="font-bold text-gray-800">{h.apartmentNumber}</p>
+                                                    <p className="text-xs text-gray-500">Chủ hộ: {h.ownerName}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-3 text-gray-500 text-sm">Không tìm thấy căn hộ này</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Quan hệ</label>
-                                <select value={formData.relationship} onChange={(e) => setFormData({ ...formData, relationship: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <select value={formData.relationToOwner} onChange={(e) => setFormData({ ...formData, relationToOwner: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                     <option value="Chủ hộ">Chủ hộ</option><option value="Vợ/Chồng">Vợ/Chồng</option><option value="Con">Con</option><option value="Bố/Mẹ">Bố/Mẹ</option>
                                 </select>
                             </div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày vào</label><input value={formData.moveInDate} onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
+                            {/* <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày vào</label><input value={formData.moveInDate} onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div> */}
                         </div>
 
                         {/* <div className="flex gap-3 justify-end pt-4 border-t mt-6">
@@ -182,7 +320,10 @@ const ResidentListPage = () => {
                         <div className="flex gap-4 pt-6 mt-6 border-t border-gray-100">
                             <Button
                                 type="button"
-                                onClick={() => setIsModalOpen(false)}
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    setAptSearch('');
+                                }}
                                 className="flex-1 bg-gray-300 font-bold hover:bg-gray-500 transition-all"
                             >
                                 Hủy
@@ -190,6 +331,9 @@ const ResidentListPage = () => {
                             <Button
                                 type="submit"
                                 className="flex-1 bg-linear-to-r from-blue-500 to-cyan-500 font-bold shadow-lg shadow-blue-200 transition-all"
+                                onClick={() => {
+                                    setAptSearch('');
+                                }}
                             >
                                 {editingResident ? 'Cập nhật' : 'Thêm'}
                             </Button>
@@ -198,89 +342,6 @@ const ResidentListPage = () => {
                 </div>
             </Modal>
         </div>
-        // // 1. ĐÃ SỬA: Bọc bằng ContentWrapper
-        // <ContentWrapper title="Quản lý Nhân Khẩu">
-
-        //     {/* Header Actions */}
-        //     <div className="flex justify-end mb-6">
-        //         <button
-        //             onClick={() => handleOpenModal()}
-        //             className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/30 font-medium"
-        //         >
-        //             <Plus size={20} />
-        //             Thêm nhân khẩu
-        //         </button>
-        //     </div>
-
-        //     {/* Main Content Card - Đã sửa style Glass */}
-        //     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-sm">
-
-        //         {/* Search Bar */}
-        //         <div className="p-5 border-b border-white/10 flex gap-4">
-        //             <div className="relative flex-1 max-w-md">
-        //                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-        //                 <input
-        //                     placeholder="Tìm kiếm theo tên, CMND hoặc căn hộ..."
-        //                     value={searchTerm}
-        //                     onChange={(e) => setSearchTerm(e.target.value)}
-        //                     className="w-full pl-10 pr-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-        //                 />
-        //             </div>
-        //         </div>
-
-        //         {/* Table */}
-        //         <div className="overflow-x-auto">
-        //             <table className="w-full text-white">
-        //                 <thead className="bg-black/20 text-gray-300 uppercase text-xs font-semibold">
-        //                     <tr>
-        //                         <th className="text-left py-4 px-6">Họ và tên</th>
-        //                         <th className="text-left py-4 px-6">CMND/CCCD</th>
-        //                         <th className="text-left py-4 px-6">Ngày sinh</th>
-        //                         <th className="text-left py-4 px-6">Giới tính</th>
-        //                         <th className="text-left py-4 px-6">Số ĐT</th>
-        //                         <th className="text-left py-4 px-6">Căn hộ</th>
-        //                         <th className="text-left py-4 px-6">Quan hệ</th>
-        //                         <th className="text-left py-4 px-6">Thao tác</th>
-        //                     </tr>
-        //                 </thead>
-        //                 <tbody className="divide-y divide-white/5">
-        //                     {filteredResidents.map((resident) => (
-        //                         <tr key={resident.id} className="hover:bg-white/5 transition-colors">
-        //                             <td className="py-4 px-6 font-medium">{resident.name}</td>
-        //                             <td className="py-4 px-6 text-gray-300">{resident.idCard}</td>
-        //                             <td className="py-4 px-6 text-gray-300">{resident.birthDate}</td>
-        //                             <td className="py-4 px-6 text-gray-300">{resident.gender}</td>
-        //                             <td className="py-4 px-6 text-gray-300">{resident.phone || '-'}</td>
-        //                             <td className="py-4 px-6">
-        //                                 <span className="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg text-sm font-medium">
-        //                                     {resident.apartment}
-        //                                 </span>
-        //                             </td>
-        //                             <td className="py-4 px-6 text-gray-300">{resident.relationship}</td>
-        //                             <td className="py-4 px-6">
-        //                                 <div className="flex gap-3">
-        //                                     <button onClick={() => handleOpenModal(resident)} className="text-blue-400 hover:text-blue-300 transition-colors">
-        //                                         <Edit size={18} />
-        //                                     </button>
-        //                                     <button onClick={() => handleDelete(resident.id)} className="text-red-400 hover:text-red-300 transition-colors">
-        //                                         <Trash2 size={18} />
-        //                                     </button>
-        //                                 </div>
-        //                             </td>
-        //                         </tr>
-        //                     ))}
-        //                 </tbody>
-        //             </table>
-        //         </div>
-
-        //         <div className="p-4 border-t border-white/10 text-sm text-gray-400 bg-black/20">
-        //             Tổng số: <span className="font-medium text-white">{filteredResidents.length}</span> nhân khẩu
-        //         </div>
-        //     </div>
-
-        //     {/* Modal Form */}
-
-        // </ContentWrapper>
     );
 };
 

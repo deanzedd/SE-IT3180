@@ -1,5 +1,5 @@
 const Household = require('../models/household');
-const Resident = require('../models/residents');
+const Resident = require('../models/resident');
 // @desc    Get all households
 // @route   GET /api/households
 //PHIÊN BẢN ĐẦU: GỌI TẤT CẢ CÁC HOUSEHOLD CÙNG VỚI MEMBER

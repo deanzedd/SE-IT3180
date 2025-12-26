@@ -28,7 +28,7 @@ const HouseholdPage = () => {
 
     const fetchHouseholds = async () => {
         try {
-            setLoading(false);
+            setLoading(true);
             const config = { headers: { Authorization: `Bearer ${user.token}` } };
             const response = await axios.get('http://localhost:5000/api/households', config);
             setHouseholds(response.data);
