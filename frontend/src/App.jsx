@@ -13,6 +13,7 @@ import UserManagementPage from './pages/Admin/UserManagementPage'; // Trang qu�
 
 // Import Sidebar (Nếu bạn chưa có file này, hãy tạo nó trong components/layout/Sidebar.jsx)
 import Sidebar from './components/layout/Sidebar';
+import TransactionList from './pages/PaymentSessions/TransactionList';
 
 // Layout chính cho phần Dashboard (Có Sidebar)
 const DashboardLayout = () => {
@@ -62,7 +63,6 @@ function App() {
                         <Route path="/quan-ly-phi" element={<FeeManagerPage />} />
                         <Route path="/dot-thu" element={<PaymentCollectionPage />} />
                         <Route path="/nguoi-dung" element={<UserManagementPage />} />
-                        <Route path="/giao-dich" element={<TransactionPage />} />
                     </Route>
 
                     {/* Route mặc định: Nếu gõ link sai thì về trang chủ */}

@@ -7,7 +7,7 @@ const AddFeeModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
         name: '',
         unitPrice: '',
         unit: '',
-        type: 'Bắt buộc',
+        type: '',
         description: ''
     });
 
@@ -16,15 +16,16 @@ const AddFeeModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
         if (initialData) {
             // Map backend enum values to Vietnamese labels
             const typeMap = {
-                'mandatory': 'Bắt buộc',
-                'voluntary': 'Tự nguyện'
+                'Bắt buộc (Tự động tính)': 'mandatory_automatic',
+                'Bắt buộc (Nhập thủ công)': 'mandatory_manual',
+                'Tự nguyện': 'voluntary'
             };
             setFormData({
                 ...initialData,
                 type: typeMap[initialData.type] || initialData.type
             });
         } else {
-            setFormData({ name: '', unitPrice: '', unit: '', type: 'Bắt buộc', description: '' });
+            setFormData({ name: '', unitPrice: '', unit: '', type: 'mandatory_automatic', description: '' });
         }
     }, [initialData, isOpen]);
 
@@ -32,12 +33,12 @@ const AddFeeModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
         e.preventDefault();
         // Map Vietnamese type labels to backend enum values
         const typeMap = {
-            'Bắt buộc': 'mandatory',
+            'Bắt buộc (Tự động tính)': 'mandatory_automatic',
+            'Bắt buộc (Nhập thủ công)': 'mandatory_manual',
             'Tự nguyện': 'voluntary'
         };
         const payload = {
             ...formData,
-            type: typeMap[formData.type] || formData.type,
             unitPrice: Number(formData.unitPrice)
         };
         onSubmit(payload);
@@ -94,8 +95,9 @@ const AddFeeModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
                             onChange={e => setFormData({ ...formData, type: e.target.value })} 
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="Bắt buộc">Bắt buộc</option>
-                            <option value="Tự nguyện">Tự nguyện</option>
+                            <option value="mandatory_automatic">Bắt buộc (Tự động tính)</option>
+                            <option value="mandatory_manual">Bắt buộc (Nhập thủ công)</option>
+                            <option value="voluntary">Tự nguyện</option>
                         </select>
                     </div>
                     <div>

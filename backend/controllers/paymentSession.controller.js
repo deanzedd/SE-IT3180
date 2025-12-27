@@ -1,7 +1,8 @@
 const PaymentSession = require('../models/paymentSession');
 const Fee = require('../models/fee');
 const mongoose = require('mongoose');
-
+//const Invoice = require('../models/invoice'); // Đảm bảo đường dẫn đúng tới file model Invoice
+const Transaction = require('../models/transaction');
 // Helper function to check for valid ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -86,6 +87,7 @@ const editPaymentSession = async (req, res) => {
 // @desc      Delete payment session
 // @route     DELETE /api/payments/sessions/:id
 // @access    Private
+//CHỈ SỬ DỤNG ĐỂ XÓA NHỮNG ĐỢT THU RÁC
 const deletePaymentSession = async (req, res) => {
     const { id } = req.params;
 
@@ -94,8 +96,13 @@ const deletePaymentSession = async (req, res) => {
     }
 
     try {
-        // WARNING: Cần kiểm tra xem có Transaction nào liên kết với Session này không trước khi xóa
-        // Nếu có, phải ngăn chặn xóa hoặc xử lý xóa mềm (soft delete).
+        // 1. Xóa tất cả Invoices thuộc đợt thu này
+        //await Invoice.deleteMany({ paymentSession: sessionId });
+    
+        // 2. Xóa tất cả Transactions thuộc đợt thu này
+        await Transaction.deleteMany({ paymentSession: id });
+
+        // 3. Cuối cùng mới xóa Session
         const result = await PaymentSession.findByIdAndDelete(id);
 
         if (!result) {
@@ -108,11 +115,35 @@ const deletePaymentSession = async (req, res) => {
     }
 };
 
+// @desc      Delete a fee in a payment session
+// @route     DELETE /api/payments/sessions/:session_id/:fee_id
+// @access    Private
+const deleteFeeInPaymentSession = async (req, res) => {
+    try {
+        const { session_id, fee_id } = req.params;
 
+        const session = await PaymentSession.findByIdAndUpdate(
+            session_id,
+            { 
+                $pull: { fees: { _id: fee_id } } 
+            },
+            { new: true }
+        ).populate('fees.fee');
+
+        if (!session) {
+            return res.status(404).json({ message: "Không tìm thấy đợt thu" });
+        }
+
+        res.status(200).json(session);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 module.exports = {
     getPaymentSessions,
     createPaymentSession,
     editPaymentSession,
-    deletePaymentSession
+    deletePaymentSession,
+    deleteFeeInPaymentSession
 };

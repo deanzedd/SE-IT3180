@@ -9,7 +9,7 @@ const transactionSchema = mongoose.Schema({
 	amount: { type: Number, required: true },
 	date: { type: Date, default: Date.now },
 	payerName: { type: String },
-	method: { type: String, enum: ['cash', 'bank', 'card', 'other'], default: 'cash' },
+	method: { type: String, enum: ['cash', 'bank', 'other'], default: 'cash' },
 	note: { type: String },
 	createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 	status: {

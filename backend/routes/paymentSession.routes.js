@@ -4,7 +4,8 @@ const { protect } = require('../middleware/auth.middleware');
 const { getPaymentSessions,
     createPaymentSession,
     editPaymentSession,
-    deletePaymentSession } = require('../controllers/paymentSession.controller');
+    deletePaymentSession,
+    deleteFeeInPaymentSession } = require('../controllers/paymentSession.controller');
 const { getTransactionsBySession } = require('../controllers/transaction.controller');
 
 // Route cho các thao tác Lấy danh sách (GET) và Tạo mới (POST)
@@ -20,4 +21,7 @@ router.route('/:id')
 // Endpoint: /api/paymentSessions/:id/transactions
 router.route('/:id/transactions') 
     .get(protect, getTransactionsBySession);
+
+router.route('/:session_id/:fee_id')
+    .delete(protect, deleteFeeInPaymentSession)
 module.exports = router;

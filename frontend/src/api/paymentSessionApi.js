@@ -16,6 +16,9 @@ const paymentSessionApi = {
     remove(id) {
         return axiosClient.delete(`/paymentSessions/${id}`);
     },
+    removeFee(session_id, fee_id) {
+        return axiosClient.delete(`/paymentSessions/${session_id}/${fee_id}/`);
+    }
 };
 
 export default paymentSessionApi;

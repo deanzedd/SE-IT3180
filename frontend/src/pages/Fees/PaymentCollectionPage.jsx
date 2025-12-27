@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, FileSpreadsheet, CheckCircle, ArrowRight, DollarSign, Calendar, CalendarIcon } from 'lucide-react';
+import { Plus, Eye, FileSpreadsheet, CheckCircle, ArrowRight, DollarSign, Calendar, CalendarIcon, ListCheck, Trash2, Factory } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Table from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
@@ -8,11 +8,11 @@ import "react-datepicker/dist/react-datepicker.css";
 import AddFeeModal from './AddFeeModal';
 import paymentSessionApi from '../../api/paymentSessionApi';
 import feeApi from '../../api/feeApi';
-const existingFeeTypes = [
-    { id: 1, name: 'Phí quản lý chung cư', price: 7000 },
-    { id: 2, name: 'Phí vệ sinh', price: 30000 },
-    { id: 3, name: 'Phí gửi xe máy', price: 80000 },
-];
+// const existingFeeTypes = [
+//     { id: 1, name: 'Phí quản lý chung cư', price: 7000 },
+//     { id: 2, name: 'Phí vệ sinh', price: 30000 },
+//     { id: 3, name: 'Phí gửi xe máy', price: 80000 },
+// ];
 
 const apartments = [
     { id: 'A101', owner: 'Nguyễn Văn A' },
@@ -50,8 +50,12 @@ const PaymentCollectionPage = () => {
         description: ''
     });
 
+    //Danh sách khoản phí
+    const [allFees, setAllFees] = useState([]);
+
     useEffect(() => {
         fetchSessions();
+        fetchAllFees();
     }, []);
 
     const fetchSessions = async () => {
@@ -63,6 +67,15 @@ const PaymentCollectionPage = () => {
             console.error('Lỗi tải danh sách đợt thu:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchAllFees = async () => {
+        try {
+            const response = await feeApi.getAll(); // Gọi tới API danh mục phí
+            setAllFees(response.data);
+        } catch (error) {
+            console.error('Lỗi tải danh mục phí:', error);
         }
     };
 
@@ -86,6 +99,39 @@ const PaymentCollectionPage = () => {
         } catch (error) {
             console.error('Lỗi tạo đợt thu:', error);
             alert('Tạo đợt thu thất bại');
+        }
+    };
+
+    const handleDeleteSession = async (id) => {
+        if (window.confirm('Xác nhận xóa đợt thu?')) {
+                try {
+                    await paymentSessionApi.remove(id);
+                    fetchSessions();
+                } catch (error) {
+                    alert('Lỗi khi xóa');
+                }
+        }
+    }
+
+    const handleDeleteFee = async (feeIdInSession) => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa khoản phí này khỏi đợt thu?')) {
+            try {
+                // feeIdInSession chính là cái _id nằm ngang hàng với fee object trong mảng fees
+                // Endpoint: /api/payments/sessions/:session_id/:fee_id
+                await paymentSessionApi.removeFee(currentSession._id, feeIdInSession);
+                
+                // Cập nhật lại state tại chỗ để giao diện biến mất khoản phí đó ngay
+                const updatedFees = currentSession.fees.filter(f => f._id !== feeIdInSession);
+                const updatedSession = { ...currentSession, fees: updatedFees };
+                
+                setCurrentSession(updatedSession);
+                setSessions(sessions.map(s => s._id === currentSession._id ? updatedSession : s));
+                
+                alert('Đã xóa khoản phí thành công');
+            } catch (error) {
+                console.error('Lỗi khi xóa khoản phí:', error);
+                alert('Không thể xóa khoản phí');
+            }
         }
     };
 
@@ -121,7 +167,14 @@ const PaymentCollectionPage = () => {
         try {
             const updatedSession = { 
                 ...currentSession, 
-                fees: [...(currentSession.fees || []), { fee: fee._id || fee.id }] 
+                fees: [
+                    ...(currentSession.fees || []), 
+                    { 
+                        fee: fee._id || fee.id, 
+                        // PHẢI NẰM Ở ĐÂY: Bên trong object của từng phần tử mảng fees
+                        unitPrice: fee.unitPrice 
+                    }
+                ],
             };
             const response = await paymentSessionApi.update(currentSession._id || currentSession.id, updatedSession);
             setCurrentSession(response.data);
@@ -178,10 +231,16 @@ const PaymentCollectionPage = () => {
                             </span>
                         </td>
                         <td className="py-4 px-6">{new Date(s.startDate).toLocaleDateString('vi-VN')}</td>
-                        <td className="py-4 px-6 text-right">
-                            <button onClick={() => { setCurrentSession(s); setView('DETAIL'); }} className="text-blue-500 hover:text-blue-700 font-bold text-sm transition-colors flex items-center justify-end ml-auto">
-                                <Eye size={16} className="mr-1" /> Chi tiết
-                            </button>
+                        <td className="py-4 px-6">
+                            <div className='flex justify-end'>
+                                <button onClick={() => { setCurrentSession(s); setView('DETAIL'); }} className="text-blue-400 hover:text-blue-600">
+                                    <Eye size={18} className="mr-1" />
+                                </button>
+                                <button onClick={() => { handleDeleteSession(s._id) }} className="text-red-400 hover:text-red-600">
+                                    <Trash2 size={18} className="mr-1" />
+                                </button>
+                            </div>
+                            
                         </td>
                     </tr>
                 )}
@@ -190,58 +249,141 @@ const PaymentCollectionPage = () => {
         </div>
     );
 
-    const renderSessionDetail = () => (
-        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-5">
-                <div>
-                    <button onClick={() => setView('LIST')} className="text-gray-400 text-sm hover:text-blue-600 mb-2 transition-colors flex items-center">
-                        ← Quay lại danh sách
-                    </button>
-                    <h2 className="text-2xl font-black text-gray-900">{currentSession.title || currentSession.name}</h2>
-                    <p className="text-gray-500 text-sm mt-1">{currentSession.description}</p>
-                </div>
-                <div className="flex gap-3">
-                    <Button onClick={() => alert('Đang xuất...')} className="bg-emerald-500">
-                        <FileSpreadsheet size={18} className="mr-2" /> Xuất Excel
-                    </Button>
-                    <Button onClick={() => { setView('INPUT_MONEY'); setSelectedFeeForInput(null); }} className="bg-orange-500 shadow-lg shadow-orange-100">
-                        <DollarSign size={18} className="mr-2" /> Nhập tiền thu
-                    </Button>
-                </div>
-            </div>
+    const renderSessionDetail = () => {
+        // Phân loại các khoản thu dựa trên schema 'type' bạn đã định nghĩa
+        const mandatoryAutoFees = (currentSession.fees || []).filter(f => f.fee?.type === 'mandatory_automatic');
+        const mandatoryManualFees = (currentSession.fees || []).filter(f => f.fee?.type === 'mandatory_manual');
+        const voluntaryFees = (currentSession.fees || []).filter(f => f.fee?.type === 'voluntary');
 
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-gray-800">Danh sách khoản thu:</h3>
-                <Button onClick={() => setIsAddFeeModalOpen(true)} className="bg-linear-to-r from-blue-500 to-cyan-500">
-                    Thêm khoản thu
-                </Button>
-            </div>
+        const handleUpdateAutoFees = async () => {
+            try {
+                // Gọi API để backend tính toán phí dựa trên diện tích/số xe của hộ dân
+                await paymentSessionApi.calculateAutoFees(currentSession._id || currentSession.id);
+                alert("Đã cập nhật tính toán phí tự động cho toàn bộ căn hộ!");
+                fetchSessions(); // Refresh lại dữ liệu
+            } catch (error) {
+                console.error("Lỗi cập nhật phí tự động:", error);
+            }
+        };
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {(currentSession.fees || []).map((fee, idx) => (
-                    <div key={idx} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center hover:border-blue-200 transition-all">
-                        <div>
-                            <p className="font-bold text-gray-800">{fee.name}</p>
-                            <p className="text-blue-600 font-mono text-sm font-bold">{Number(fee.price).toLocaleString()} đ</p>
-                        </div>
-                        <CheckCircle className="text-green-500" size={24} />
+        return (
+            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                {/* Header giữ nguyên như cũ */}
+                <div className="flex justify-between items-center border-b border-gray-100 pb-5">
+                    <div>
+                        <button onClick={() => setView('LIST')} className="text-gray-400 text-sm hover:text-blue-600 mb-2 transition-colors flex items-center">
+                            ← Quay lại danh sách
+                        </button>
+                        <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">{currentSession.title}</h2>
+                        <p className="text-gray-500 text-sm mt-1 italic">{currentSession.description}</p>
                     </div>
-                ))}
+                    <div className="flex gap-3">
+                        <Button onClick={() => { setView('APPROVE_TRANSACTION'); setSelectedFeeForInput(null); }} className="bg-pink-500 shadow-lg">
+                            <DollarSign size={18} className="mr-2" /> Duyệt giao dịch
+                        </Button>
+                        <Button onClick={() => alert('Đang xuất...')} className="bg-emerald-500 shadow-lg shadow-emerald-200">
+                            <FileSpreadsheet size={18} className="mr-2" /> Xuất Excel
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <ListCheck className="text-blue-600" /> Danh sách các khoản thu
+                    </h3>
+                    <Button onClick={() => setIsAddFeeModalOpen(true)} className="bg-linear-to-r from-blue-600 to-cyan-500 py-2">
+                        <Plus className="mr-1" size={18}/> Thêm khoản thu
+                    </Button>
+                </div>
+
+                {/* --- NHÓM 1: BẮT BUỘC - TỰ ĐỘNG --- */}
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-4 bg-blue-50/50 border-b border-blue-100 flex justify-between items-center">
+                        <span className="font-bold text-blue-700 text-sm uppercase">1. Bắt buộc - Tự động (Hệ thống tính)</span>
+                        <button 
+                            onClick={handleUpdateAutoFees}
+                            className="px-4 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-md shadow-blue-200"
+                        >
+                            <CheckCircle size={14} /> Cập nhật phí
+                        </button>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {mandatoryAutoFees.map((f, idx) => (
+                            <div key={idx} className="p-3 border border-gray-100 rounded-2xl flex justify-between items-center hover:bg-gray-50 transition-colors">
+                                <span className="font-bold text-gray-700">{f.fee?.name}</span>
+                                <span className="text-blue-600 font-mono font-bold text-xs">{Number(f.unitPrice).toLocaleString()} đ/{f.fee?.unit}</span>
+                                <button 
+                                    onClick={() => handleDeleteFee(f._id)}
+                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                    title="Xóa khoản phí này"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        ))}
+                        {mandatoryAutoFees.length === 0 && <p className="col-span-full text-center text-gray-400 text-xs italic py-2">Chưa có khoản thu nào</p>}
+                    </div>
+                </div>
+
+                {/* --- NHÓM 2: BẮT BUỘC - THỦ CÔNG --- */}
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-4 bg-orange-50/50 border-b border-orange-100 flex justify-between items-center">
+                        <span className="font-bold text-orange-700 text-sm uppercase">2. Bắt buộc - Thủ công (Điện, nước...)</span>
+                        <button 
+                            onClick={() => setView('INPUT_MONEY')}
+                            className="px-4 py-1.5 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-all flex items-center gap-2 shadow-md shadow-orange-200"
+                        >
+                            <DollarSign size={14} /> Nhập số liệu
+                        </button>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {mandatoryManualFees.map((f, idx) => (
+                            <div key={idx} className="p-3 border border-gray-100 rounded-2xl flex justify-between items-center">
+                                <span className="font-bold text-gray-700">{f.fee?.name}</span>
+                                <span className="text-orange-600 font-mono font-bold text-xs">{Number(f.unitPrice).toLocaleString()} đ/{f.fee?.unit}</span>
+                                <button 
+                                    onClick={() => handleDeleteFee(f._id)}
+                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all group-hover:opacity-100"
+                                    title="Xóa khoản phí này"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        ))}
+                        {mandatoryManualFees.length === 0 && <p className="col-span-full text-center text-gray-400 text-xs italic py-2">Chưa có khoản thu nào</p>}
+                    </div>
+                </div>
+
+                {/* --- NHÓM 3: TỰ NGUYỆN --- */}
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-4 bg-emerald-50/50 border-b border-emerald-100 flex justify-between items-center">
+                        <span className="font-bold text-emerald-700 text-sm uppercase">3. Tự nguyện</span>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {voluntaryFees.map((f, idx) => (
+                            <div key={idx} className="p-3 border border-gray-100 rounded-2xl flex justify-between items-center">
+                                <span className="font-bold text-gray-700">{f.fee?.name}</span>
+                                <span className="text-emerald-600 font-mono font-bold text-xs">{Number(f.unitPrice).toLocaleString()} đ</span>
+                            </div>
+                        ))}
+                        {voluntaryFees.length === 0 && <p className="col-span-full text-center text-gray-400 text-xs italic py-2">Chưa có khoản thu nào</p>}
+                    </div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderInputMoney = () => (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-4xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-200">
                 <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
-                    <h2 className="text-2xl font-black text-gray-800 tracking-tight">Ghi nhận số tiền thu</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">Ghi nhận số tiền thu</h2>
                     <button onClick={() => setView('DETAIL')} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all text-2xl font-light">×</button>
                 </div>
 
                 <div className="p-8 flex-1 overflow-y-auto">
                     <div className="mb-8">
-                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4">1. Chọn loại phí</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-4">1. Chọn loại phí</label>
                         <div className="flex gap-3 flex-wrap">
                             {currentSession.fees.map(fee => (
                                 <button
@@ -260,14 +402,14 @@ const PaymentCollectionPage = () => {
 
                     {selectedFeeForInput && (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4">2. Nhập tiền cư dân đóng: <span className="text-blue-600 ml-2">{selectedFeeForInput.name}</span></label>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-4">2. Nhập tiền cư dân đóng: <span className="text-blue-600 ml-2">{selectedFeeForInput.name}</span></label>
                             <div className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
                                 <Table 
                                     headers={[{label: 'Căn hộ'}, {label: 'Chủ hộ'}, {label: 'Số tiền đóng (VNĐ)'}]}
                                     data={apartments}
                                     renderRow={(apt) => (
                                         <tr key={apt.id}>
-                                            <td className="py-4 px-6 font-black text-blue-600">{apt.id}</td>
+                                            <td className="py-4 px-6 font-bold text-blue-600">{apt.id}</td>
                                             <td className="py-4 px-6 font-bold text-gray-700">{apt.owner}</td>
                                             <td className="py-4 px-6">
                                                 <div className="relative max-w-50">
@@ -364,7 +506,7 @@ const PaymentCollectionPage = () => {
             {/* Modal Thêm khoản thu */}
             <Modal isOpen={isAddFeeModalOpen} onClose={() => { setIsAddFeeModalOpen(false); setAddFeeStep('CHOICE'); }}>
                 <div className="p-4">
-                    <h3 className="text-xl font-black text-gray-800 mb-8 text-center uppercase tracking-tight">Thêm khoản thu</h3>
+                    <h3 className="text-xl font-bold text-gray-800 mb-8 text-center uppercase tracking-tight">Thêm khoản thu</h3>
                     {addFeeStep === 'CHOICE' && (
                         <div className="space-y-4">
                             <button onClick={() => setAddFeeStep('EXISTING')} className="w-full p-6 border-2 border-gray-100 rounded-[24px] hover:border-blue-500 hover:bg-blue-50 flex justify-between items-center group transition-all">
@@ -380,27 +522,47 @@ const PaymentCollectionPage = () => {
                     )}
                     {addFeeStep === 'EXISTING' && (
                         <div className="space-y-4">
-                            <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
-                                {existingFeeTypes.map(f => (
-                                    <div key={f.id} onClick={() => handleAddFeeToSession(f)} className="p-4 border border-gray-100 rounded-2xl hover:bg-blue-50 hover:border-blue-200 cursor-pointer flex justify-between items-center transition-all">
-                                        <span className="font-bold text-gray-700">{f.name}</span>
-                                        <span className="text-blue-600 font-mono font-bold text-sm">{f.price.toLocaleString()} đ</span>
+                            <div className="max-h-80 overflow-y-auto space-y-3 custom-scrollbar">
+                                {allFees.map(f => (
+                                    <div key={f._id} className="p-4 border border-gray-200 rounded-xl bg-white flex flex-col gap-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-bold text-gray-800">{f.name}</span>
+                                            <span className="text-xs text-gray-400 italic">Gốc: {f.unitPrice?.toLocaleString()}đ/{f.unit}</span>
+                                        </div>
+                                        
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <input 
+                                                    type="number"
+                                                    defaultValue={f.unitPrice}
+                                                    id={`price-${f._id}`} // ID để lấy giá trị ghi đè
+                                                    className="w-full text-right pr-8 pl-2 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold text-blue-600"
+                                                    placeholder="Nhập giá mới..."
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">VND</span>
+                                            </div>
+                                            
+                                            <button 
+                                                onClick={() => {
+                                                    // Lấy giá trị từ input ngay phía trên
+                                                    const overridePrice = document.getElementById(`price-${f._id}`).value;
+                                                    handleAddFeeToSession({ ...f, unitPrice: Number(overridePrice) });
+                                                }}
+                                                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-1"
+                                            >
+                                                <Plus size={14} /> Thêm
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
+                                {allFees.length === 0 && <p className="text-center text-gray-400 py-4 italic text-sm">Danh mục phí đang trống</p>}
                             </div>
-                            <button onClick={() => setAddFeeStep('CHOICE')} className="text-sm font-bold text-gray-400 hover:text-blue-600 transition-colors w-full text-center py-2">Quay lại</button>
                         </div>
                     )}
-                    {/* {addFeeStep === 'NEW' && (
-                        <div className="space-y-4 animate-in fade-in duration-300">
-                            <input placeholder="Tên khoản thu" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all" onChange={e => setNewFeeForm({ ...newFeeForm, name: e.target.value })} />
-                            <input type="number" placeholder="Số tiền (VND)" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all" onChange={e => setNewFeeForm({ ...newFeeForm, price: e.target.value })} />
-                            <div className="flex gap-4 pt-4">
-                                <Button onClick={() => setAddFeeStep('CHOICE')} className="flex-1 bg-gray-100 text-gray-500">Hủy</Button>
-                                <Button onClick={() => handleAddFeeToSession({ id: Date.now(), ...newFeeForm })} className="flex-1 bg-emerald-500">Thêm khoản thu</Button>
-                            </div>
-                        </div>
-                    )} */}
+                    <div className='pt-5 flex justify-center'>
+                        <Button onClick={() => setIsAddFeeModalOpen(false)} className="bg-gray-400">Quay lại</Button>
+                    </div>
+                    
                 </div>
             </Modal>
             <AddFeeModal 
