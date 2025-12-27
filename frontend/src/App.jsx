@@ -62,6 +62,7 @@ function App() {
                         <Route path="/quan-ly-phi" element={<FeeManagerPage />} />
                         <Route path="/dot-thu" element={<PaymentCollectionPage />} />
                         <Route path="/nguoi-dung" element={<UserManagementPage />} />
+                        <Route path="/giao-dich" element={<TransactionPage />} />
                     </Route>
 
                     {/* Route mặc định: Nếu gõ link sai thì về trang chủ */}
