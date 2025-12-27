@@ -6,11 +6,11 @@ const residentSchema = mongoose.Schema({
 	idNumber: { type: String, required: true }, // CCCD/ID
 	dob: { type: Date },
 	gender: { type: String, enum: ['male', 'female', 'other'] },
-	relationToOwner: { type: String }, // Ví dụ: chủ hộ, vợ/chồng, con
+	relationToOwner: { type: String, required: true, enum: ['owner', 'spouse', 'child', 'parent', 'sibling', 'relative', 'renter', 'other'] }, // Mối quan hệ với chủ hộ
 	phone: { type: String },
 	email: { type: String },
 	status: { type: String, enum: ['active', 'inactive'], default: 'active' },
-	household: { type: mongoose.Schema.Types.ObjectId, ref: 'Household' }
+	household: { type: mongoose.Schema.Types.ObjectId, ref: 'Household', required: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Resident', residentSchema);
