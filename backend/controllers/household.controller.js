@@ -16,9 +16,14 @@ const getHouseholds = async (req, res) => {
 // @desc    Create new household
 // @route   POST /api/households
 const createHousehold = async (req, res) => {
-    const { apartmentNumber, area, ownerName, motorbikeNumber, carNumber, status } = req.body;
+    const { apartmentNumber, area, motorbikeNumber, carNumber, status } = req.body;
     try {
-        const household = new Household({ apartmentNumber, area, ownerName, motorbikeNumber, carNumber, status });
+        // Validate required fields
+        if (!apartmentNumber || !area) {
+            return res.status(400).json({ message: "Vui lòng nhập số căn hộ và diện tích" });
+        }
+
+        const household = new Household({ apartmentNumber, area, motorbikeNumber, carNumber, status });
         const createdHousehold = await household.save();
         res.status(201).json(createdHousehold);
     } catch (error) {

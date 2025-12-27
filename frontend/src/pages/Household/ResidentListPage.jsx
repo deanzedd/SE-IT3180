@@ -9,13 +9,6 @@ import DatePicker from "react-datepicker";
 import residentsApi from '../../api/residentsApi';
 import householdApi from '../../api/householdApi';
 
-// const initialResidents = [
-//     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
-//     { id: 2, name: 'Nguyễn Thị B', idCard: '001234567891', birthDate: '20/08/1985', gender: 'Nữ', phone: '0901234568', apartment: 'A101', relationship: 'Vợ/Chồng', moveInDate: '01/01/2020' },
-//     { id: 3, name: 'Nguyễn Văn C', idCard: '001234567892', birthDate: '10/03/2010', gender: 'Nam', phone: '', apartment: 'A101', relationship: 'Con', moveInDate: '01/01/2020' },
-//     { id: 4, name: 'Trần Thị D', idCard: '001234567893', birthDate: '25/11/1978', gender: 'Nữ', phone: '0901234569', apartment: 'A202', relationship: 'Chủ hộ', moveInDate: '15/06/2021' },
-// ];
-
 const ResidentListPage = () => {
     const { user } = useAuth();
     const [residents, setResidents] = useState([]);
@@ -38,7 +31,7 @@ const ResidentListPage = () => {
         gender: 'male',
         phone: '',
         household: '', // Đây là ID của hộ khẩu
-        relationToOwner: 'Chủ hộ'
+        relationToOwner: 'owner' // Default value - must be one of the enum values
     });
 
     const fetchData = async () => {
@@ -103,9 +96,9 @@ const ResidentListPage = () => {
                 </span>
             </td>
             <td className="py-4 px-6">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${resident.relationToOwner === 'Chủ hộ' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${resident.relationToOwner === 'owner' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
                     }`}>
-                    {resident.relationToOwner}
+                    {resident.relationToOwner === 'owner' ? 'Chủ hộ' : resident.relationToOwner === 'spouse' ? 'Vợ/Chồng' : resident.relationToOwner === 'child' ? 'Con' : resident.relationToOwner === 'parent' ? 'Bố/Mẹ' : resident.relationToOwner === 'sibling' ? 'Anh/Chị/Em' : resident.relationToOwner === 'relative' ? 'Người thân' : resident.relationToOwner === 'renter' ? 'Người thuê' : 'Khác'}
                 </span>
             </td>
             <td className="py-4 px-6">
@@ -139,13 +132,20 @@ const ResidentListPage = () => {
             });
         } else {
             setEditingResident(null);
-            setFormData({ fullName: '', idNumber: '', dob: '', gender: 'male', phone: '', household: '', relationToOwner: 'Chủ hộ' });
+            setFormData({ fullName: '', idNumber: '', dob: '', gender: 'male', phone: '', household: '', relationToOwner: 'owner' });
         }
         setIsModalOpen(true);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validate that household is selected
+        if (!formData.household) {
+            alert('Vui lòng chọn hộ khẩu');
+            return;
+        }
+        
         try {
             if (editingResident) {
                 await residentsApi.update(editingResident._id, formData);
@@ -222,7 +222,7 @@ const ResidentListPage = () => {
             </div>
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
                         {editingResident ? 'Chỉnh sửa nhân khẩu' : 'Thêm nhân khẩu mới'}
                     </h3>
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -284,7 +284,7 @@ const ResidentListPage = () => {
                                                     className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none"
                                                 >
                                                     <p className="font-bold text-gray-800">{h.apartmentNumber}</p>
-                                                    <p className="text-xs text-gray-500">Chủ hộ: {h.ownerName}</p>
+                                                    <p className="text-xs text-gray-500">Diện tích: {h.area}m²</p>
                                                 </div>
                                             ))
                                         ) : (
@@ -296,9 +296,16 @@ const ResidentListPage = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Quan hệ</label>
-                                <select value={formData.relationToOwner} onChange={(e) => setFormData({ ...formData, relationToOwner: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                    <option value="Chủ hộ">Chủ hộ</option><option value="Vợ/Chồng">Vợ/Chồng</option><option value="Con">Con</option><option value="Bố/Mẹ">Bố/Mẹ</option>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Quan hệ với chủ hộ <span className="text-red-500">*</span></label>
+                                <select value={formData.relationToOwner} onChange={(e) => setFormData({ ...formData, relationToOwner: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                    <option value="owner">Chủ hộ</option>
+                                    <option value="spouse">Vợ/Chồng</option>
+                                    <option value="child">Con</option>
+                                    <option value="parent">Bố/Mẹ</option>
+                                    <option value="sibling">Anh/Chị/Em</option>
+                                    <option value="relative">Người thân</option>
+                                    <option value="renter">Người thuê</option>
+                                    <option value="other">Khác</option>
                                 </select>
                             </div>
                             {/* <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày vào</label><input value={formData.moveInDate} onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div> */}

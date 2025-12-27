@@ -4,7 +4,6 @@ const mongoose = require('mongoose');
 const householdSchema = mongoose.Schema({
     apartmentNumber: { type: String, required: true, unique: true }, // Số phòng
     area: { type: Number, required: true }, // Diện tích (m2)
-    ownerName: { type: String, required: true }, // Tên chủ hộ
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
     members: [{
         type: mongoose.Schema.Types.ObjectId,
