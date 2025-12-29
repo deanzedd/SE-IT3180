@@ -264,7 +264,12 @@ const PaymentCollectionPage = () => {
             </div>
 
             <Table
-                headers={[{ label: 'Tên đợt thu' }, { label: 'Trạng thái' }, { label: 'Ngày bắt đầu' }, { label: 'Hành động', className: 'text-right' }]}
+                headers={[
+                    { label: 'Tên đợt thu', className: 'text-left'  }, 
+                    { label: 'Trạng thái', className: 'text-left'  }, 
+                    { label: 'Ngày bắt đầu', className: 'text-left'  }, 
+                    { label: 'Hành động', className: 'text-right' }]
+                }
                 data={sessions}
                 renderRow={(s) => (
                     <tr key={s._id || s.id} className="hover:bg-gray-50 transition-colors">

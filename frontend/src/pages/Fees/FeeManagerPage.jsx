@@ -107,7 +107,10 @@ const FeeManagerPage = () => {
             'area': 'Diện tích căn hộ (m²)',
             'person': 'Số người',
             'household': 'Hộ gia đình',
-            'fixed': 'Cố định'
+            'fixed': 'Cố định',
+            'water': 'Mét khối (m³)',
+            'electricity': 'kWh',
+            'default': 'Nhập thẳng số tiền',
         };
         return unitMap[unit] || unit;
     };

@@ -21,7 +21,7 @@ const ResidentListPage = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Lọc danh sách căn hộ dựa trên số phòng người dùng nhập
-    const suggestedHouseholds = households.filter(h => 
+    const suggestedHouseholds = (households || []).filter(h => 
         h.apartmentNumber.toLowerCase().includes(aptSearch.toLowerCase())
     ).slice(0, 5); // Chỉ hiện 5 kết quả đầu tiên cho gọn
     const [formData, setFormData] = useState({

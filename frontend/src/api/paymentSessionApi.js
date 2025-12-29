@@ -24,6 +24,9 @@ const paymentSessionApi = {
     },
     updateFeeInvoices(sessionId, feeId, invoices) {
         return axiosClient.put(`/paymentSessions/${sessionId}/fees/${feeId}/invoices`, { invoices });
+    },
+    getTransactionsBySession(id) {
+        return axiosClient.get(`/paymentSessions/${id}/transactions`);
     }
 };
 
