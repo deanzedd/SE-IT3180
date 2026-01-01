@@ -9,6 +9,13 @@ import DatePicker from "react-datepicker";
 import residentsApi from '../../api/residentsApi';
 import householdApi from '../../api/householdApi';
 
+// const initialResidents = [
+//     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
+//     { id: 2, name: 'Nguyễn Thị B', idCard: '001234567891', birthDate: '20/08/1985', gender: 'Nữ', phone: '0901234568', apartment: 'A101', relationship: 'Vợ/Chồng', moveInDate: '01/01/2020' },
+//     { id: 3, name: 'Nguyễn Văn C', idCard: '001234567892', birthDate: '10/03/2010', gender: 'Nam', phone: '', apartment: 'A101', relationship: 'Con', moveInDate: '01/01/2020' },
+//     { id: 4, name: 'Trần Thị D', idCard: '001234567893', birthDate: '25/11/1978', gender: 'Nữ', phone: '0901234569', apartment: 'A202', relationship: 'Chủ hộ', moveInDate: '15/06/2021' },
+// ];
+
 const ResidentListPage = () => {
     const { user } = useAuth();
     const [residents, setResidents] = useState([]);
@@ -21,7 +28,7 @@ const ResidentListPage = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Lọc danh sách căn hộ dựa trên số phòng người dùng nhập
-    const suggestedHouseholds = (households || []).filter(h => 
+    const suggestedHouseholds = households.filter(h => 
         h.apartmentNumber.toLowerCase().includes(aptSearch.toLowerCase())
     ).slice(0, 5); // Chỉ hiện 5 kết quả đầu tiên cho gọn
     const [formData, setFormData] = useState({
