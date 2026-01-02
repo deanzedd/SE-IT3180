@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import householdApi from '../../api/householdApi';
-import { Plus, Edit, Trash2, User, Home as HomeIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, User, Home as HomeIcon, FileSpreadsheet } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button.jsx';
 import SearchBar from '../../components/common/SearchBar.jsx';
 import Table from '../../components/common/Table.jsx';
 import { useAuth } from '../../context/AuthContext'; // Lấy user từ context
+import { exportToExcel } from '../../utils/excelHandle';
 
 const HouseholdPage = () => {
     const { user } = useAuth(); // Lấy thông tin user đã đăng nhập
@@ -40,9 +41,11 @@ const HouseholdPage = () => {
 
     const tableHeaders = [
         { label: 'Căn hộ', className: 'text-left'},
+        { label: 'Chủ hộ', className: 'text-left'},
         { label: 'Diện tích', className: 'text-left'},
         { label: 'Thành viên', className: 'text-left'},
-        { label: 'Xe cộ (Máy/Ô tô)', className: 'text-left'},
+        { label: 'Số xe máy', className: 'text-left'},
+        { label: 'Số ô tô', className: 'text-left'},
         { label: 'Trạng thái', className: 'text-left' },
         { label: 'Thao tác', className: 'text-left' }
     ];
@@ -54,11 +57,11 @@ const HouseholdPage = () => {
                     {household.apartmentNumber}
                 </span>
             </td>
+            <td className="text-left py-4 px-6">{household.ownerName || 'Trống'}</td>
             <td className="text-left py-4 px-6">{household.area}m²</td>
             <td className="text-left py-4 px-6">{household.members?.length || 0}</td>
-            <td className="text-left py-4 px-6">
-                {household.motorbikeNumber} / {household.carNumber}
-            </td>
+            <td className="text-left py-4 px-6">{household.motorbikeNumber}</td>
+            <td className="text-left py-4 px-6">{household.carNumber}</td>
             <td className="text-left py-4 px-6">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     household.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
@@ -82,6 +85,20 @@ const HouseholdPage = () => {
     const filteredHouseholds = households.filter(h =>
         h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleExportExcel = () => {
+        const dataToExport = filteredHouseholds.map(h => ({
+            "Số phòng": h.apartmentNumber,
+            "Chủ hộ": h.ownerName || 'Trống',
+            "Diện tích (m2)": h.area,
+            "Số thành viên": h.members?.length || 0,
+            "Số xe máy": h.motorbikeNumber,
+            "Số ô tô": h.carNumber,
+            "Trạng thái": h.status === 'active' ? 'Đang ở' : 'Trống'
+        }));
+
+        exportToExcel(dataToExport, "Danh_sach_ho_khau.xlsx", "Danh sách hộ khẩu");
+    };
 
     const handleOpenModal = (household = null) => {
         if (household) {
@@ -139,10 +156,15 @@ const HouseholdPage = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">Quản lý hộ khẩu</h2>
-                <Button onClick={() => handleOpenModal()} className="bg-linear-to-r from-blue-500 to-cyan-500">
-                    <Plus className="w-5 h-5" /> Thêm hộ khẩu
-                </Button>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Quản lý hộ khẩu</h2>
+                <div className="flex gap-3">
+                    <Button onClick={handleExportExcel} className="bg-white text-green-600 border border-green-200 hover:bg-green-500 shadow-sm">
+                        <FileSpreadsheet className="w-5 h-5 mr-1" /> Xuất Excel
+                    </Button>
+                    <Button onClick={() => handleOpenModal()} className="bg-linear-to-r from-blue-500 to-cyan-500">
+                        <Plus className="w-5 h-5" /> Thêm hộ khẩu
+                    </Button>
+                </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between gap-4">

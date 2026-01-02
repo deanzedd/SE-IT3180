@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, User, ArrowRightLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, User, ArrowRightLeft, FileSpreadsheet } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import SearchBar from '../../components/common/SearchBar';
@@ -9,6 +9,7 @@ import DatePicker from "react-datepicker";
 import residentsApi from '../../api/residentsApi';
 import householdApi from '../../api/householdApi';
 import { useNavigate } from 'react-router-dom';
+import { exportToExcel } from '../../utils/excelHandle';
 
 // const initialResidents = [
 //     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
@@ -76,6 +77,21 @@ const ResidentListPage = () => {
         (resident.idNumber || '').includes(searchTerm) ||
         (resident.household?.apartmentNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleExportExcel = () => {
+        const dataToExport = filteredResidents.map(r => ({
+            "Họ và tên": r.fullName,
+            "CMND/CCCD": r.idNumber,
+            "Ngày sinh": r.dob ? new Date(r.dob).toLocaleDateString('vi-VN') : '',
+            "Giới tính": r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
+            "Số điện thoại": r.phone,
+            "Căn hộ": r.household?.apartmentNumber,
+            "Quan hệ với chủ hộ": r.relationToOwner === 'owner' ? 'Chủ hộ' : r.relationToOwner === 'spouse' ? 'Vợ/Chồng' : r.relationToOwner === 'child' ? 'Con' : r.relationToOwner === 'parent' ? 'Bố/Mẹ' : r.relationToOwner === 'sibling' ? 'Anh/Chị/Em' : r.relationToOwner === 'relative' ? 'Người thân' : r.relationToOwner === 'renter' ? 'Người thuê' : 'Khác',
+            "Trạng thái": r.status === 'temporary_residence' ? 'Tạm trú' : r.status === 'temporary_absence' ? 'Tạm vắng' : 'Thường trú'
+        }));
+
+        exportToExcel(dataToExport, "Danh_sach_nhan_khau.xlsx", "Danh sách nhân khẩu");
+    };
 
     const tableHeaders = [
         { label: 'Họ và tên', className: 'text-left' },
@@ -209,6 +225,13 @@ const ResidentListPage = () => {
                     >
                         <ArrowRightLeft className="w-5 h-5 mr-1" />
                         Biến đổi nhân khẩu
+                    </Button>
+                    <Button
+                        onClick={handleExportExcel}
+                        className="bg-white text-green-600 border border-green-200 hover:bg-green-500 shadow-sm"
+                    >
+                        <FileSpreadsheet className="w-5 h-5 mr-1" />
+                        Xuất Excel
                     </Button>
                     <Button
                         onClick={() => handleOpenModal()}

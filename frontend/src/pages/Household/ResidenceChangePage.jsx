@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowLeft, Edit, Trash2, ArrowRightLeft } from 'lucide-react';
+import { Plus, ArrowLeft, Edit, Trash2, ArrowRightLeft, FileSpreadsheet } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import SearchBar from '../../components/common/SearchBar';
 import Table from '../../components/common/Table';
@@ -8,6 +8,7 @@ import residenceChangeApi from '../../api/residenceChangeApi';
 import residentsApi from '../../api/residentsApi';
 import householdApi from '../../api/householdApi';
 import ResidenceChangeModal from './ResidenceChangeModal';
+import { exportToExcel } from '../../utils/excelHandle';
 
 const ResidenceChangePage = () => {
     const navigate = useNavigate();
@@ -96,6 +97,21 @@ const ResidenceChangePage = () => {
         return matchesTab && matchesSearch;
     });
 
+    const handleExportExcel = () => {
+        const dataToExport = filteredChanges.map(item => ({
+            "Họ tên": item.resident?.fullName,
+            "CMND/CCCD": item.resident?.idNumber,
+            "Căn hộ gốc": item.resident?.household?.apartmentNumber || '',
+            "Loại biến đổi": item.changeType === 'temporary_residence' ? 'Tạm trú' : 'Tạm vắng',
+            "Ngày bắt đầu": new Date(item.startDate).toLocaleDateString('vi-VN'),
+            "Ngày kết thúc": item.endDate ? new Date(item.endDate).toLocaleDateString('vi-VN') : '',
+            "Chi tiết (Nơi đến/Căn hộ tạm trú)": item.changeType === 'temporary_residence' ? (item.household?.apartmentNumber || 'N/A') : (item.destination || 'N/A'),
+            "Ghi chú": item.note
+        }));
+
+        exportToExcel(dataToExport, `Bien_doi_nhan_khau_${activeTab}.xlsx`, activeTab === 'temporary_residence' ? "Tạm trú" : "Tạm vắng");
+    };
+
     const renderRow = (item) => (
         <tr key={item._id} className="hover:bg-gray-50">
             <td className="py-4 px-6 font-bold text-gray-900">{item.resident?.fullName}</td>
@@ -134,6 +150,9 @@ const ResidenceChangePage = () => {
                 <div className="flex gap-3">
                     <Button onClick={() => navigate('/nhan-khau')} className="bg-white border border-gray-200 shadow-sm hover:bg-linear-to-r from-blue-500 to-cyan-500 min-w-[200px]">
                         <ArrowLeft className="w-5 h-5 mr-1" /> Trở về trang quản lý
+                    </Button>
+                    <Button onClick={handleExportExcel} className="bg-white text-green-600 border border-green-200 hover:bg-green-500 shadow-sm">
+                        <FileSpreadsheet className="w-5 h-5 mr-1" /> Xuất Excel
                     </Button>
                     <Button onClick={() => { setEditingChange(null); setIsModalOpen(true); }} className="bg-linear-to-r from-blue-500 to-cyan-500  min-w-[220px]">
                         <Plus className="w-5 h-5 mr-1" /> Thêm biến đổi nhân khẩu

@@ -6,8 +6,22 @@ const Resident = require('../models/resident');
 //DỰ KIẾN: KHI LOAD TRANG KHÔNG CẦN GỌI MEMBER, MÀ SẼ GỌI KHI BẤM NÚT CHI TIẾT
 const getHouseholds = async (req, res) => {
     try {
-        const households = await Household.find().populate('members');
-        res.json(households);
+        // Populate members để lấy thông tin chi tiết nhân khẩu
+        const households = await Household.find().populate('members').sort({ apartmentNumber: 1 });
+        
+        // Map qua từng hộ để tìm chủ hộ và thêm trường ownerName
+        const data = households.map(h => {
+            const householdObj = h.toObject();
+            // Tìm thành viên là chủ hộ
+            const owner = (h.members || []).find(m => m.relationToOwner === 'owner');
+            
+            return {
+                ...householdObj,
+                ownerName: owner ? owner.fullName : 'Chưa có'
+            };
+        });
+
+        res.status(200).json(data);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
