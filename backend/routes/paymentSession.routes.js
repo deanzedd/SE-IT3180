@@ -10,7 +10,8 @@ const { getPaymentSessions,
     updateInvoicesForFee,
     getPaymentDetails,
     updateColumnQuantity,
-    toggleFeePayment } = require('../controllers/paymentSession.controller');
+    toggleFeePayment,
+    calculateAutoFees } = require('../controllers/paymentSession.controller');
 const { getTransactionsBySession } = require('../controllers/transaction.controller');
 
 // Route cho các thao tác Lấy danh sách (GET) và Tạo mới (POST)
@@ -46,4 +47,7 @@ router.route('/:id/columns/:feeId')
 
 router.route('/details/:id/toggle')
     .put(protect, toggleFeePayment);
+
+router.route('/:id/calculate-auto-fees')
+    .post(protect, calculateAutoFees);
 module.exports = router;

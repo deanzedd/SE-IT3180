@@ -109,6 +109,8 @@ const FeeManagerPage = () => {
             'household': 'Hộ gia đình',
             'fixed': 'Cố định',
             'water': 'Mét khối (m³)',
+            'car': 'Ô tô',
+            'bike': 'Xe máy',
             'electricity': 'kWh',
             'default': 'Nhập thẳng số tiền',
         };

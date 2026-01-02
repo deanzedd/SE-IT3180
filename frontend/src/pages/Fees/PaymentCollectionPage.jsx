@@ -349,6 +349,7 @@ const PaymentCollectionPage = () => {
                 await paymentSessionApi.calculateAutoFees(currentSession._id || currentSession.id);
                 alert("Đã cập nhật tính toán phí tự động cho toàn bộ căn hộ!");
                 fetchSessions(); // Refresh lại dữ liệu
+                await fetchPaymentDetails();
             } catch (error) {
                 console.error("Lỗi cập nhật phí tự động:", error);
             }
@@ -423,7 +424,12 @@ const PaymentCollectionPage = () => {
                             <div key={idx} className="p-3 border border-gray-100 rounded-2xl flex justify-between items-center group hover:bg-gray-50 transition-colors">
                                 <div className="flex flex-col">
                                     <span className="font-bold text-gray-700">{f.fee?.name}</span>
-                                    <span className="text-orange-600 font-bold text-xs">{Number(f.unitPrice).toLocaleString()} đ/{f.fee?.unit}</span>
+                                    <span className="text-orange-600 font-bold text-xs">
+                                        {f.fee?.unit === 'default' 
+                                            ? 'Nhập thẳng số tiền' 
+                                            : `${Number(f.unitPrice).toLocaleString()}đ / ${f.fee?.unit || ''}`
+                                        }
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button 
@@ -456,7 +462,6 @@ const PaymentCollectionPage = () => {
                         {voluntaryFees.map((f, idx) => (
                             <div key={idx} className="p-3 border border-gray-100 rounded-2xl flex justify-between items-center group hover:bg-gray-50 transition-colors">
                                 <span className="font-bold text-gray-700">{f.fee?.name}</span>
-                                <span className="text-emerald-600 font-mono font-bold text-xs">{Number(f.unitPrice).toLocaleString()} đ</span>
                                 <button 
                                     onClick={() => handleDeleteFee(f._id)}
                                     className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
@@ -525,23 +530,33 @@ const PaymentCollectionPage = () => {
                         renderRow={(item) => {
                             // Logic tính toán tức thì tại Frontend
                             const qty = Number(inputData[item.household?._id] || 0);
+                            const isInvalid = qty < 0; // Điều kiện kiểm tra âm
                             const price = selectedFeeForInput?.unitPrice || 1; // Nếu unitPrice null thì nhân 1 (giữ nguyên qty)
                             const rowTotal = qty * (selectedFeeForInput?.unitPrice ? price : 1);
 
                             return (
-                                <tr key={item._id} className="hover:bg-orange-50/30 transition-colors">
+                                <tr key={item._id} className={`transition-colors ${isInvalid ? 'bg-red-50' : 'hover:bg-orange-50/30'}`}>
                                     <td className="py-4 px-6 font-bold text-blue-600">{item.household?.apartmentNumber}</td>
-                                    <td className="py-4 px-6">
+                                    <td className="py-4 px-6 relative">
                                         <input
                                             type="number"
                                             placeholder="0"
                                             value={inputData[item.household?._id] || ''}
-                                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-right font-bold text-orange-600"
+                                            className={`w-full px-4 py-2 border rounded-xl outline-none text-right font-bold transition-all
+                                                ${isInvalid 
+                                                    ? 'border-red-500 bg-red-50 text-red-600 animate-pulse' 
+                                                    : 'bg-gray-50 border-gray-200 text-orange-600 focus:ring-2 focus:ring-orange-500'
+                                                }`}
                                             onChange={(e) => setInputData({ ...inputData, [item.household?._id]: e.target.value })}
                                         />
+                                        {isInvalid && (
+                                            <p className="absolute right-8 -bottom-1 text-[10px] text-red-500 font-bold italic">
+                                                Giá trị không được âm!
+                                            </p>
+                                        )}
                                     </td>
-                                    <td className="py-4 px-6 text-right font-black text-gray-900">
-                                        {rowTotal.toLocaleString('vi-VN')} đ
+                                    <td className={`py-4 px-6 text-right font-black ${isInvalid ? 'text-red-600' : 'text-gray-900'}`}>
+                                        {isInvalid ? 'Lỗi dữ liệu' : `${rowTotal.toLocaleString('vi-VN')} đ`}
                                     </td>
                                 </tr>
                             );
@@ -599,7 +614,7 @@ const PaymentCollectionPage = () => {
                     </div>
                     <div className="flex h-[calc(100vh-100px)] gap-4 animate-in fade-in duration-300">
                         {/* CỘT TRÁI: BẢNG PAYMENT GRID (Chiếm 75%) */}
-                        <div className="w-3/4 h-full">
+                        <div className="w-2/3 h-full">
                             <PaymentGrid 
                                 details={householdDetails}
                                 feeHeaders={feeHeaders}
@@ -611,9 +626,13 @@ const PaymentCollectionPage = () => {
                                 onVoluntaryChange={handleVoluntaryChange}
                             />
                         </div>
-
-                        {/* CỘT PHẢI: TRANSACTION LIST (Chiếm 25%) */}
-                        <TransactionList session={currentSession} />
+                            <div className="w-1/3 h-full">
+                                {/* CỘT PHẢI: TRANSACTION LIST (Chiếm 25%) */}
+                                <TransactionList 
+                                    session={currentSession} 
+                                    households={householdDetails}
+                                />
+                        </div>
                     </div>
                 </div>
             )}

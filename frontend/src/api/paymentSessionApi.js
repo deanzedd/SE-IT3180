@@ -38,6 +38,9 @@ const paymentSessionApi = {
     toggleFeePayment(detailId, payload) {
         // payload gồm { feeInSessionId, mode: 'SINGLE' | 'ALL_MANDATORY' }
         return axiosClient.put(`/paymentSessions/details/${detailId}/toggle`, payload);
+    },
+    calculateAutoFees(sessionId) {
+        return axiosClient.post(`/paymentSessions/${sessionId}/calculate-auto-fees`);
     }
 };
 

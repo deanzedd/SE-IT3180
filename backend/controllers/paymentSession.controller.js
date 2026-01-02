@@ -64,30 +64,76 @@ const createPaymentSession = async (req, res) => {
 const syncHouseholdPayments = async (session) => {
     const households = await Household.find({});
     
-    // Tạo danh sách items chuẩn từ session hiện tại
-    const feeItems = session.fees.map(f => ({
-        feeInSessionId: f._id,
-        feeRef: f.fee._id || f.fee,
+    // 1. Lấy danh sách chi tiết hiện tại của session này
+    const currentDetails = await HouseholdPaymentDetail.find({ paymentSession: session._id });
+
+    // 2. Chuẩn bị cấu trúc items chuẩn từ session mới nhất
+    const sessionFeeConfigs = session.fees.map(f => ({
+        feeInSessionId: f._id.toString(),
         feeName: f.fee.name, 
         feeType: f.fee.type,
-        unitPrice: f.unitPrice,
-        quantity: 0,
-        totalAmount: 0,
-        paidAmount: 0,
-        isPaid: false
+        unit: f.fee.unit,
+        unitPrice: f.unitPrice
     }));
 
-    const ops = households.map(h => ({
-        updateOne: {
-            filter: { paymentSession: session._id, household: h._id },
-            // SỬA TẠI ĐÂY: Thay vì $set items, hãy dùng logic thông minh hơn
-            // Hoặc đơn giản là $set toàn bộ items nếu bạn chấp nhận reset số liệu khi thêm cột (không khuyến khích)
-            update: { $set: { items: feeItems } }, 
-            upsert: true 
+    const ops = households.map(h => {
+        // Tìm bản ghi hiện tại của hộ này
+        const existingDoc = currentDetails.find(d => d.household.toString() === h._id.toString());
+        
+        let updatedItems = [];
+
+        if (existingDoc) {
+            // MERGE LOGIC: So khớp items cũ và cấu trúc session mới
+            updatedItems = sessionFeeConfigs.map(config => {
+                const oldItem = existingDoc.items.find(
+                    item => item.feeInSessionId.toString() === config.feeInSessionId
+                );
+
+                if (oldItem) {
+                    // Nếu đã có: giữ nguyên quantity, isPaid... nhưng cập nhật unitPrice/name/type mới
+                    return {
+                        ...oldItem.toObject(),
+                        feeName: config.feeName,
+                        feeType: config.feeType,
+                        unit: config.unit,
+                        unitPrice: config.unitPrice,
+                        // Quan trọng: recalculate totalAmount dựa trên quantity cũ và giá mới
+                        totalAmount: (oldItem.quantity || 0) * config.unitPrice 
+                    };
+                } else {
+                    // Nếu là cột phí mới thêm vào session: khởi tạo mặc định
+                    return {
+                        ...config,
+                        quantity: 0,
+                        totalAmount: 0,
+                        paidAmount: 0,
+                        isPaid: false
+                    };
+                }
+            });
+        } else {
+            // Nếu là hộ dân mới hoàn toàn: khởi tạo items từ đầu
+            updatedItems = sessionFeeConfigs.map(config => ({
+                ...config,
+                quantity: 0,
+                totalAmount: 0,
+                paidAmount: 0,
+                isPaid: false
+            }));
         }
-    }));
 
-    await HouseholdPaymentDetail.bulkWrite(ops);
+        return {
+            updateOne: {
+                filter: { paymentSession: session._id, household: h._id },
+                update: { $set: { items: updatedItems } },
+                upsert: true
+            }
+        };
+    });
+
+    if (ops.length > 0) {
+        await HouseholdPaymentDetail.bulkWrite(ops);
+    }
 };
 
 // @desc      Update payment session
@@ -309,6 +355,7 @@ const updateColumnQuantity = async (req, res) => {
                         item.isPaid = true;
                         item.paidAmount = item.quantity; // Với phí tự nguyện, totalAmount = quantity
                     } else {
+                        item.quantity = 0;
                         item.isPaid = false;
                         item.paidAmount = 0;
                     }
@@ -348,11 +395,65 @@ const toggleFeePayment = async (req, res) => {
                 item.paidAmount = item.isPaid ? item.totalAmount : 0;
             }
         }
-
+        detail.markModified('items');
         // Middleware pre('save') sẽ tự động tính lại tổng tiền đã nộp và trạng thái
         await detail.save();
         res.status(200).json(detail);
     } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const calculateAutoFees = async (req, res) => {
+    const { id: sessionId } = req.params;
+
+    try {
+        // 1. Lấy tất cả chi tiết bảng thu của đợt này và populate thông tin hộ dân
+        const details = await HouseholdPaymentDetail.find({ paymentSession: sessionId })
+            .populate('household');
+
+        if (!details.length) {
+            return res.status(404).json({ message: "Chưa có dữ liệu chi tiết để tính toán" });
+        }
+
+        // 2. Lặp qua từng hộ dân để tính toán các khoản phí tự động
+        for (const doc of details) {
+            const household = doc.household;
+            //console.log(household);
+            doc.items.forEach(item => {
+                console.log("item: ", item);
+                // Chỉ tính toán cho các loại phí có type là 'mandatory_automatic'
+                if (item.feeType === 'mandatory_automatic' && household.status === 'active') {
+                    // Logic tính toán quantity dựa trên đơn vị (unit)
+                    // Giả sử unit được lưu trong item hoặc lấy từ Fee gốc
+                    switch (item.unit) {
+                        case 'area':
+                            item.quantity = household.area || 0;
+                            break;
+                        case 'bike':
+                            item.quantity = household.motorbikeNumber || 0;
+                            break;
+                        case 'car':
+                            item.quantity = household.carNumber || 0;
+                            break;
+                        case 'person':
+                            item.quantity = household.members ? household.members.length : 0;
+                            break;
+                        default:
+                            item.quantity = 1;
+                            break;
+                    }
+                    // totalAmount sẽ được Middleware pre('save') tính toán lại: quantity * unitPrice
+                }
+            });
+
+            // 3. Lưu bản ghi để kích hoạt middleware tính tổng tiền và trạng thái
+            await doc.save();
+        }
+
+        res.status(200).json({ message: "Tính toán phí tự động hoàn tất" });
+    } catch (error) {
+        console.error("Lỗi calculateAutoFees:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -366,5 +467,6 @@ module.exports = {
     updateInvoicesForFee,
     getPaymentDetails,
     updateColumnQuantity,
-    toggleFeePayment
+    toggleFeePayment,
+    calculateAutoFees
 };

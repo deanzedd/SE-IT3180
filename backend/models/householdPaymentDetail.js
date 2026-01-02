@@ -22,24 +22,21 @@ const householdPaymentDetailSchema = mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId, 
                 required: true 
             },
-            
-            // Tham chiếu đến Fee gốc để lấy icon, phân loại (Bắt buộc/Tự nguyện)
-            feeRef: { 
-                type: mongoose.Schema.Types.ObjectId, 
-                ref: 'Fee' 
-            },
-
             feeType: {       // THÊM MỚI: Snapshot loại phí (mandatory_automatic, mandatory_manual, voluntary)
                 type: String,
                 enum: ['mandatory_automatic', 'mandatory_manual', 'voluntary']
             },
+            
             feeName: String, // Snapshot tên phí để xem nhanh
-
             // Dữ liệu tài chính
+            unit: { 
+                type: String,
+                enum: ['area', 'person', 'household', 'bike', 'car', 'fixed', 'm^3', 'electricity', 'default'],
+            },
             unitPrice: { type: Number, required: true }, // Giá đã ghi đè từ Session
             quantity: { type: Number, default: 0 },      // Số lượng (m2, số điện, số người...)
             totalAmount: { type: Number, default: 0 },   // unitPrice * quantity
-
+            paidAmount: { type: Number, default: 0 },
             isPaid: { type: Boolean, default: false }
         }
     ],

@@ -119,6 +119,8 @@ const AddFeeModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
                                                 <option value="area">Diện tích căn hộ (m²)</option>
                                                 <option value="person">Số người</option>
                                                 <option value="household">Hộ gia đình</option>
+                                                <option value="car">Ô tô</option>
+                                                <option value="bike">Xe máy</option>
                                                 <option value="fixed">Cố định</option>
                                             </>
                                         ) : (

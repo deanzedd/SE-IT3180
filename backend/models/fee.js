@@ -15,7 +15,7 @@ const feeSchema = mongoose.Schema({
     unit: { 
         type: String, 
         // THÊM 'm^3', 'electricity', 'default' VÀO ĐÂY
-        enum: ['area', 'person', 'household', 'fixed', 'm^3', 'electricity', 'default'], 
+        enum: ['area', 'person', 'household', 'bike', 'car', 'fixed', 'm^3', 'electricity', 'default'], 
         required: function() { return this.type !== 'voluntary'; } // Cập nhật lại điều kiện nếu cần
     },
     description: String

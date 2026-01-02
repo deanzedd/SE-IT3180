@@ -4,6 +4,7 @@ import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 
 const AddTransactionModal = ({ isOpen, onClose, households, onSubmit, currentUser, currentSession }) => {
+    console.log("households: ", households);
     // 1. Bổ sung State giống bên Resident
     const [aptSearch, setAptSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -18,9 +19,25 @@ const AddTransactionModal = ({ isOpen, onClose, households, onSubmit, currentUse
     });
 
     // 2. Logic lọc căn hộ (Bê nguyên từ Resident)
-    const suggestedHouseholds = (households || []).filter(h =>
-        (h.apartmentNumber || '').toLowerCase().includes(aptSearch.toLowerCase())
+    const suggestedHouseholds = (households || []).filter(item =>
+        (item.household?.apartmentNumber || '').toLowerCase().includes(aptSearch.toLowerCase())
     ).slice(0, 5);
+
+    // Khi chọn căn hộ từ gợi ý
+    const handleSelect = (item) => {
+        setSelectedHousehold(item);
+        setAptSearch(item.household?.apartmentNumber || '');
+        
+        // Tính toán số tiền còn nợ (Bắt buộc) để gợi ý nhập liệu
+        const debt = (item.totalBill || 0) - (item.totalPaidAmount || 0);
+        
+        setFormData(prev => ({
+            ...prev,
+            payerName: item.household?.ownerName || '',
+            amount: debt > 0 ? debt : ''
+        }));
+        setShowSuggestions(false);
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -45,7 +62,7 @@ const AddTransactionModal = ({ isOpen, onClose, households, onSubmit, currentUse
 
         const submitData = {
             ...formData,
-            household: selectedHousehold._id,
+            household: selectedHousehold.household?._id,
             paymentSession: currentSession, 
             createdBy: currentUser,
             amount: Number(formData.amount)
@@ -53,6 +70,10 @@ const AddTransactionModal = ({ isOpen, onClose, households, onSubmit, currentUse
         
         onSubmit(submitData);
     };
+
+    const totalBill = selectedHousehold?.totalBill || 0;
+    const totalPaid = selectedHousehold?.totalPaidAmount || 0;
+    const remainingDebt = totalBill - totalPaid;
 
     return (
         <Modal isOpen={isOpen} onClose={onClose}>
@@ -86,17 +107,11 @@ const AddTransactionModal = ({ isOpen, onClose, households, onSubmit, currentUse
                                     suggestedHouseholds.map(h => (
                                         <div
                                             key={h._id}
-                                            onClick={() => {
-                                                setSelectedHousehold(h);
-                                                setAptSearch(h.apartmentNumber);
-                                                setFormData({ ...formData, payerName: h.ownerName || '' });
-                                                setShowSuggestions(false);
-                                            }}
+                                            onClick={() => handleSelect(h)}
                                             className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none flex justify-between items-center"
                                         >
                                             <div>
-                                                <p className="font-bold text-gray-800">{h.apartmentNumber}</p>
-                                                <p className="text-xs text-gray-500">Chủ hộ: {h.ownerName}</p>
+                                                <p className="font-bold text-gray-800">{h.household.apartmentNumber}</p>
                                             </div>
                                             {selectedHousehold?._id === h._id && <CheckCircle size={16} className="text-blue-600" />}
                                         </div>
@@ -109,9 +124,39 @@ const AddTransactionModal = ({ isOpen, onClose, households, onSubmit, currentUse
                     </div>
 
                     {/* HIỂN THỊ CĂN HỘ ĐÃ CHỌN */}
-                    <div className="bg-blue-50 p-3 rounded-lg border border-dashed border-blue-300 text-center">
-                        <p className="text-[10px] text-blue-500 uppercase font-bold tracking-wider">Căn hộ đã chọn</p>
-                        <p className="text-lg font-black text-blue-700">{selectedHousehold ? selectedHousehold.apartmentNumber : '---'}</p>
+                    <div className="bg-blue-50 rounded-2xl border border-dashed border-blue-300 overflow-hidden mb-4">
+                        <div className="grid grid-cols-3 divide-x divide-blue-200">
+                            
+                            {/* Cột 1: Căn hộ */}
+                            <div className="p-3 h-20 flex flex-col justify-end items-center">
+                                <p className="text-[10px] text-blue-500 uppercase font-bold tracking-wider mb-auto text-center">
+                                    Căn hộ
+                                </p>
+                                <p className="text-xl font-black text-blue-700 leading-none">
+                                    {selectedHousehold ? selectedHousehold.household.apartmentNumber : '---'}
+                                </p>
+                            </div>
+
+                            {/* Cột 2: Tổng phí bắt buộc */}
+                            <div className="p-3 h-20 flex flex-col justify-end items-center">
+                                <p className="text-[10px] text-orange-500 uppercase font-bold tracking-wider mb-auto text-center">
+                                    Tổng phí bắt buộc
+                                </p>
+                                <p className="text-xl font-black text-orange-600 leading-none">
+                                    {totalBill.toLocaleString('vi-VN')}
+                                </p>
+                            </div>
+
+                            {/* Cột 3: Dư nợ (Số tiền còn lại cần thu) */}
+                            <div className="p-3 h-20 flex flex-col justify-end items-center">
+                                <p className="text-[10px] text-red-500 uppercase font-bold tracking-wider mb-auto text-center leading-tight">
+                                    Dư nợ hiện tại <br/> <span className="text-[8px] lowercase font-normal">(còn phải nộp)</span>
+                                </p>
+                                <p className={`text-xl font-black leading-none ${remainingDebt > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                    {remainingDebt.toLocaleString('vi-VN')}
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-4 pt-2 border-t border-gray-100">

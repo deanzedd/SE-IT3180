@@ -8,7 +8,6 @@ const PaymentGrid = ({
     onVoluntaryChange, // Hàm xử lý khi nhập tiền tự nguyện
     className 
 }) => {
-    console.log("details: ", details)
     // Helper: Format tiền tệ
     const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN').format(amount);
 
@@ -21,13 +20,15 @@ const PaymentGrid = ({
                     <span className="text-xs text-gray-600 font-medium">Đã thanh toán</span>
                     <div className="w-3 h-3 bg-white border border-gray-300 ml-3 rounded-sm"></div>
                     <span className="text-xs text-gray-600 font-medium">Chưa thanh toán</span>
+                    <div className="w-3 h-3  bg-green-500/10 rounded-sm"></div>
+                    <span className="text-xs text-gray-600 font-medium">Không có phí cần thu</span>
                 </div>
                 <span className="text-xs text-gray-400 italic">Scroll ngang để xem thêm phí</span>
             </div>
 
             {/* MAIN GRID AREA */}
             <div className="flex-1 overflow-auto custom-scrollbar relative">
-                <table className="w-full border-collapse text-sm">
+                <table className="w-full border-separate border-spacing-0 text-sm">
                     <thead className="bg-gray-100 text-gray-700">
                         <tr>
                             {/* 1. CỘT STICKY: CĂN HỘ (Góc trên cùng bên trái - Z-index cao nhất) */}
@@ -36,7 +37,7 @@ const PaymentGrid = ({
                             </th>
 
                             {/* 2. CỘT STICKY: TỔNG PHẢI NỘP (Cạnh cột căn hộ) */}
-                            <th className="sticky left-20 top-0 z-30 bg-orange-100 p-3 min-w-20 border-b border-r border-orange-200 font-bold text-orange-800 text-center shadow-md">
+                            <th className="sticky left-20 top-0 z-30 bg-orange-100 p-3 min-w-20 border-b border-r border-gray-200 font-bold text-orange-800 text-center shadow-md">
                                 Tổng phí bắt buộc
                             </th>
 
@@ -61,8 +62,12 @@ const PaymentGrid = ({
 
                                 {/* 2. DÒNG STICKY: TỔNG TIỀN (Sticky Left) */}
                                 <td 
-                                    className="sticky left-20 z-10 bg-orange-50 p-3 border-r border-b border-orange-100 font-black text-center text-orange-700 cursor-pointer hover:bg-orange-100 transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
-                                    title="Click để thanh toán toàn bộ phí bắt buộc"
+                                    className={`sticky left-20 z-10 p-3 border-r border-b font-black text-center cursor-pointer transition-all shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]
+                                        ${row.totalPaidAmount >= row.totalBill && row.totalBill > 0
+                                            ? 'bg-green-500 text-white hover:bg-green-600 border-gray-200' 
+                                            : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border-gray-200'
+                                        }`}
+                                    title={row.totalPaidAmount >= row.totalBill ? "Đã hoàn thành toàn bộ" : "Click để thanh toán toàn bộ phí bắt buộc"}
                                     onClick={() => onCellClick(row, 'ALL_MANDATORY')}
                                 >
                                     {formatCurrency(row.totalBill)}
@@ -70,52 +75,65 @@ const PaymentGrid = ({
 
                                 {/* CÁC Ô DỮ LIỆU */}
                                 {feeHeaders.map((header) => {
-                                    // Tìm item tương ứng trong mảng items của căn hộ
                                     const item = row.items.find(i => i.feeInSessionId === header.feeInSessionId);
                                     if (!item) return <td key={header.feeInSessionId} className="border-b border-gray-200"></td>;
 
-                                    const isVoluntary = item.feeType === 'voluntary'; // Là phí tự nguyện nếu không có đơn giá
-                                    const isPaid = item.isPaid || (isVoluntary && item.totalAmount > 0);
+                                    const isVoluntary = item.feeType === 'voluntary';
+                                    const isPaid = item.isPaid;
+                                    // Trạng thái trống: Bắt buộc nhưng tiền bằng 0
+                                    const isEmpty = !isVoluntary && item.totalAmount === 0;
 
-                                    if (isPaid) {
+                                    // 1. TRƯỜNG HỢP Ô TRỐNG (MÀU XANH, KHÔNG TƯƠNG TÁC)
+                                    if (isEmpty) {
                                         return (
-                                            <td 
-                                                key={item._id} 
-                                                className="p-1 border-b border-gray-200 bg-green-500 text-white text-center cursor-pointer hover:bg-green-600 transition-all"
-                                                onClick={() => {
-                                                    // Nếu muốn cho phép sửa số tiền tự nguyện sau khi đã đóng, 
-                                                    // ta có thể cho click để hiện lại input, hoặc click để toggle về 0
-                                                    if (isVoluntary) onCellClick(row, item); // Hoặc logic khác tùy bạn
-                                                }}
-                                            >
-                                                <span className="font-bold text-sm">{formatCurrency(item.totalAmount)}</span>
+                                            <td key={item._id} className="p-3 border-b border-gray-200 bg-green-500/10 text-green-600 text-center cursor-not-allowed opacity-50">
+                                                <span className="font-bold text-sm">0</span>
                                             </td>
                                         );
                                     }
 
-                                    // STYLE CHO Ô TỰ NGUYỆN (INPUT)
+                                    // 2. TRƯỜNG HỢP PHÍ TỰ NGUYỆN (LUÔN HIỆN INPUT)
                                     if (isVoluntary) {
+                                        const hasValue = item.quantity > 0;
                                         return (
-                                            <td key={item._id} className="p-2 border-b border-gray-200 bg-white text-center">
+                                            <td key={item._id} className={`p-2 border-b border-gray-200 text-center transition-colors ${hasValue ? 'bg-green-500' : 'bg-white'}`}>
                                                 <input 
                                                     type="number" 
-                                                    className="w-full text-right p-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                                    placeholder="Nhập..."
+                                                    className={`w-full text-right p-1 border rounded outline-none text-sm font-bold transition-all
+                                                        ${hasValue ? 'bg-green-500 border-gray-200 text-white placeholder-green-300' : 'bg-white border-gray-200 text-gray-700'}`}
+                                                    placeholder="0"
+                                                    min="0" // Giới hạn thuộc tính HTML
                                                     defaultValue={item.quantity > 0 ? item.quantity : ''}
-                                                    onBlur={(e) => onVoluntaryChange(row, item, e.target.value)}
+                                                    onBlur={(e) => {
+                                                        let val = Number(e.target.value);
+                                                        if (val < 0) {
+                                                            val = 0;
+                                                            e.target.value = ''; // Reset trên màn hình về rỗng (hiện placeholder 0)
+                                                        }
+                                                        onVoluntaryChange(row, item, val);
+                                                    }}
                                                     onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') onVoluntaryChange(row, item, e.target.value);
+                                                        if (e.key === 'Enter') {
+                                                            let val = Number(e.target.value);
+                                                            if (val < 0) {
+                                                                val = 0;
+                                                                e.target.value = ''; // Reset trên màn hình
+                                                            }
+                                                            onVoluntaryChange(row, item, val);
+                                                            e.target.blur(); // Thoát focus để người dùng thấy sự thay đổi
+                                                        }
                                                     }}
                                                 />
                                             </td>
                                         );
                                     }
 
-                                    // STYLE CHO Ô BẮT BUỘC CHƯA TRẢ (MÀU TRẮNG -> XANH KHI HOVER)
+                                    // 3. TRƯỜNG HỢP PHÍ BẮT BUỘC (CÓ THỂ TOGGLE)
                                     return (
                                         <td 
                                             key={item._id} 
-                                            className="p-3 border-b border-gray-200 text-center cursor-pointer hover:bg-green-100 transition-colors text-gray-400 font-medium"
+                                            className={`p-3 border-b border-gray-200 text-center cursor-pointer transition-all select-none
+                                                ${isPaid ? 'bg-green-500 text-white font-bold' : 'text-gray-400 font-medium hover:bg-green-100'}`}
                                             onClick={() => onCellClick(row, item)}
                                         >
                                             {formatCurrency(item.totalAmount)}

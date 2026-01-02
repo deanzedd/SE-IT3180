@@ -14,6 +14,11 @@ const calculateFeeAmount = (fee, household) => {
             // Assuming members is an array of ObjectIds or Residents
             return price * (household.members ? household.members.length : 0);
         case 'household':
+            return price;
+        case 'bike':
+            return price * household.motorbikeNumber;
+        case 'car':
+            return price * household.carNumber;
         case 'fixed':
             return price;
         default:
