@@ -102,6 +102,7 @@ const PaymentCollectionPage = () => {
         fetchAllFees();
         if (currentSession?._id && ['DETAIL', 'INPUT_MONEY', 'APPROVE_TRANSACTION'].includes(view)) {
             fetchPaymentDetails();
+            fetchAllFees();
         }
     }, [currentSession?._id, view, selectedFeeForInput]);
 

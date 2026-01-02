@@ -17,7 +17,7 @@ const HouseholdPage = () => {
 
     // Form data khớp với các input trên giao diện
     const [formData, setFormData] = useState({
-        apartmentNumber: '', ownerName: '', phone: '', area: '', membersCount: '0', motorbikeNumber: '0', carNumber: '0', status: 'active'
+        apartmentNumber: '', area: '', motorbikeNumber: '0', carNumber: '0', status: 'active'
     });
 
     useEffect(() => {
@@ -40,7 +40,6 @@ const HouseholdPage = () => {
 
     const tableHeaders = [
         { label: 'Căn hộ', className: 'text-left'},
-        { label: 'Chủ hộ', className: 'text-left'},
         { label: 'Diện tích', className: 'text-left'},
         { label: 'Thành viên', className: 'text-left'},
         { label: 'Xe cộ (Máy/Ô tô)', className: 'text-left'},
@@ -55,7 +54,6 @@ const HouseholdPage = () => {
                     {household.apartmentNumber}
                 </span>
             </td>
-            <td className="text-left py-4 px-6">{household.ownerName}</td>
             <td className="text-left py-4 px-6">{household.area}m²</td>
             <td className="text-left py-4 px-6">{household.members?.length || 0}</td>
             <td className="text-left py-4 px-6">
@@ -82,8 +80,7 @@ const HouseholdPage = () => {
     );
 
     const filteredHouseholds = households.filter(h =>
-        h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        h.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
+        h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleOpenModal = (household = null) => {
@@ -91,7 +88,6 @@ const HouseholdPage = () => {
             setEditingHousehold(household);
             setFormData({
                 apartmentNumber: household.apartmentNumber,
-                ownerName: household.ownerName,
                 area: household.area.toString(),
                 motorbikeNumber: household.motorbikeNumber.toString(),
                 carNumber: household.carNumber.toString(),
@@ -99,7 +95,7 @@ const HouseholdPage = () => {
             });
         } else {
             setEditingHousehold(null);
-            setFormData({ apartmentNumber: '', ownerName: '', area: '', motorbikeNumber: '0', carNumber: '0', status: 'active' });
+            setFormData({ apartmentNumber: '', area: '', motorbikeNumber: '0', carNumber: '0', status: 'active' });
         }
         setIsModalOpen(true);
     };
@@ -108,7 +104,6 @@ const HouseholdPage = () => {
         e.preventDefault();
         const data = {
             apartmentNumber: formData.apartmentNumber,
-            ownerName: formData.ownerName,
             area: Number(formData.area),
             motorbikeNumber: Number(formData.motorbikeNumber),
             carNumber: Number(formData.carNumber),
@@ -161,7 +156,7 @@ const HouseholdPage = () => {
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
-                    <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Tìm kiếm căn hộ, chủ hộ..." />
+                    <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Tìm kiếm căn hộ..." />
                 </div>
             </div>
 
@@ -185,10 +180,6 @@ const HouseholdPage = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Diện tích (m²)</label>
                                 <input type="number" value={formData.area} onChange={(e) => setFormData({ ...formData, area: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Tên chủ hộ</label>
-                            <input value={formData.ownerName} onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
