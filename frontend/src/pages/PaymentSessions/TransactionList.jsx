@@ -109,7 +109,7 @@ const TransactionList = ({ session, households }) => {
                         <div className="flex items-center gap-1 text-gray-400">
                             <Clock size={12} /> {t.date ? new Date(t.date).toLocaleDateString('vi-VN') : '-'}
                         </div>
-                        <div className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded flex items-center text-center">
+                        <div className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded items-center text-center">
                             {t.method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản'}
                         </div>
                     </div>
