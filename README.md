@@ -5,94 +5,12 @@ Tài liệu này mô tả luồng phát triển và cấu trúc thư mục chi t
 ### Giai đoạn 1: Khởi tạo & Thiết kế CSDL (Database Design)
 Đây là bước quan trọng nhất để map các Use Case vào dữ liệu.
 #### Thiết kế Schema:
-#### Thiết kế Schema:
 1. User: Dành cho admin/cán bộ quản lý đăng nhập (UC001, UC011-UC014).
 2. Household (Hộ khẩu): Lưu thông tin chủ hộ, diện tích căn hộ, số phòng (UC009, UC010).
 3. Resident (Nhân khẩu): Lưu thành viên trong hộ, quan hệ với chủ hộ (UC008).
 4. Fee (Khoản thu): Định nghĩa các loại phí (phí vệ sinh, phí gửi xe, phí đóng góp...) (UC002-UC004).
 5. PaymentSession (Đợt thu): Gom các khoản thu vào một đợt phát động (UC006, UC007).
 6. Transaction (Khoản nộp): Lưu lịch sử nộp tiền của từng hộ cho từng khoản (UC005).
-
-Bảng Schema (tóm tắt các bảng / models):
-
-### User
-| Trường | Kiểu | Bắt buộc | Mô tả |
-|---|---:|:---:|---|
-| _id | ObjectId | có | Khoá chính |
-| username | String | có, unique | Tên đăng nhập |
-| password | String | có | Mật khẩu (đã hash) |
-| fullName | String | có | Họ và tên |
-| role | String | có | enum: `admin`, `manager` |
-| createdAt / updatedAt | Date | có | Timestamps |
-
-### Household
-| Trường | Kiểu | Bắt buộc | Mô tả |
-|---|---:|:---:|---|
-| _id | ObjectId | có | Khoá chính |
-| apartmentNumber | String | có, unique | Số phòng / Mã căn hộ |
-| area | Number | có | Diện tích (m2) |
-| ownerName | String | có | Tên chủ hộ |
-| status | String | có | enum: `active`, `inactive` |
-| members | [ObjectId] -> `Resident` | không | Danh sách thành viên (refs) |
-| createdAt / updatedAt | Date | có | Timestamps |
-
-### Resident
-| Trường | Kiểu | Bắt buộc | Mô tả |
-|---|---:|:---:|---|
-| _id | ObjectId | có | Khoá chính |
-| fullName | String | có | Họ và tên |
-| idNumber | String | có | CCCD / Số CMND |
-| dob | Date | không | Ngày sinh |
-| gender | String | không | enum: `male`, `female`, `other` |
-| relationToOwner | String | không | Quan hệ với chủ hộ (ví dụ: chủ hộ, vợ/chồng) |
-| phone / email | String | không | Thông tin liên hệ |
-| status | String | không | enum: `active`, `inactive` |
-| household | ObjectId -> `Household` | không | Tham chiếu đến hộ khẩu |
-| createdAt / updatedAt | Date | có | Timestamps |
-
-### Fee
-| Trường | Kiểu | Bắt buộc | Mô tả |
-|---|---:|:---:|---|
-| _id | ObjectId | có | Khoá chính |
-| name | String | có | Tên khoản thu (Vệ sinh, Gửi xe...) |
-| type | String | có | enum: `mandatory`, `voluntary` |
-| unitPrice | Number | có | Đơn giá (vd: 6000) |
-| unit | String | có | enum: `m2`, `person`, `household`, `fixed` |
-| description | String | không | Mô tả chi tiết |
-| createdAt / updatedAt | Date | có | Timestamps |
-
-### PaymentSession (Đợt thu)
-| Trường | Kiểu | Bắt buộc | Mô tả |
-|---|---:|:---:|---|
-| _id | ObjectId | có | Khoá chính |
-| title | String | có | Tên đợt thu (vd: "Đợt thu Q1 2026") |
-| description | String | không | Mô tả |
-| startDate / endDate | Date | không | Khoảng thời gian đợt thu |
-| fees | [{ fee: ObjectId -> `Fee`, unitPrice, note }] | không | Danh sách khoản áp dụng trong đợt (cho phép override unitPrice) |
-| isActive | Boolean | không | Đang mở/đóng đợt |
-| createdBy | ObjectId -> `User` | không | Người tạo |
-| createdAt / updatedAt | Date | có | Timestamps |
-
-### Transaction (Khoản nộp)
-| Trường | Kiểu | Bắt buộc | Mô tả |
-|---|---:|:---:|---|
-| _id | ObjectId | có | Khoá chính |
-| household | ObjectId -> `Household` | có | Hộ nộp tiền |
-| fee | ObjectId -> `Fee` | không | Khoản nộp (nếu nộp theo loại) |
-| paymentSession | ObjectId -> `PaymentSession` | không | Thuộc đợt thu nào |
-| amount | Number | có | Số tiền thực nộp |
-| date | Date | có | Ngày nộp |
-| payerName | String | không | Tên người nộp (nếu khác chủ hộ) |
-| method | String | không | enum: `cash`, `bank`, `card`, `other` |
-| note | String | không | Ghi chú |
-| createdBy | ObjectId -> `User` | không | Người ghi nhận giao dịch |
-| createdAt / updatedAt | Date | có | Timestamps |
-
-Ghi chú thiết kế:
-- Sử dụng `ObjectId` để tham chiếu giữa các bảng; đặt `ref` chính xác để dùng `populate()` trong controllers.
-- Indexes: đảm bảo index cho `username` (unique), `apartmentNumber` (unique), và có thể thêm index cho `idNumber`/`createdAt` để tăng tốc tìm kiếm và thống kê.
-- `PaymentSession.fees` cho phép override `Fee.unitPrice` để phục vụ các trường hợp đợt thu có mức giá tạm thời.
-- `Transaction` lưu `paymentSession` để dễ lọc báo cáo theo đợt; cũng có thể lưu `fee` nếu nộp cho khoản cụ thể.
 
 ### Giai đoạn 2: Backend Development (API Core)
 1. Setup Server Node.js/Express.
@@ -405,6 +323,16 @@ Connecting to MongoDB...
 
 Bạn có thể thay đổi password sau khi đăng nhập lần đầu.
 
+### Bước 3.5: Tạo dữ liệu mẫu (Tùy chọn)
+
+Nếu bạn muốn có sẵn dữ liệu mẫu (Hộ khẩu, Nhân khẩu, Khoản thu, Đợt thu...) để test ngay mà không cần nhập tay, hãy chạy lệnh sau (vẫn tại thư mục `backend`):
+
+```powershell
+node scripts/seedData.js --clean
+```
+
+**Lưu ý:** Lệnh này sẽ **XÓA SẠCH** dữ liệu cũ trong database và tạo lại dữ liệu mẫu mới.
+
 ### Bước 4: Cài đặt và chạy Frontend
 
 **Mở một terminal mới** (đừng đóng terminal backend) từ thư mục gốc:
@@ -467,6 +395,3 @@ curl -X POST http://localhost:5000/api/auth/login `
   - Kiểm tra IP whitelist trên MongoDB Atlas (nếu dùng cloud)
   - Kiểm tra MongoDB service đang chạy (nếu dùng local)
  
-
-
-

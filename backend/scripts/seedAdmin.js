@@ -28,7 +28,7 @@ const seedAdmin = async () => {
         const adminUser = new User({
             username: 'admin',
             password: 'Admin123!', // Will be hashed by the pre-save hook
-            fullName: 'Administrator',
+            fullName: 'Quản Trị Viên',
             role: 'admin'
         });
 
