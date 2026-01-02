@@ -96,4 +96,44 @@ householdPaymentDetailSchema.pre('save', function () {
     }
 });
 
+householdPaymentDetailSchema.post('save', async function (doc) {
+    const PaymentSession = doc.model('PaymentSession');
+    const HouseholdPaymentDetail = doc.model('HouseholdPaymentDetail');
+
+    // 1. Tính toán lại toàn bộ thông số của Session từ tất cả hộ dân
+    const stats = await HouseholdPaymentDetail.aggregate([
+        { $match: { paymentSession: doc.paymentSession } },
+        {
+            $group: {
+                _id: '$paymentSession',
+                totalExpectedMandatory: { $sum: '$totalBill' },
+                totalPaidMandatory: { $sum: '$totalPaidAmount' },
+                // Tính tổng quỹ tự nguyện (voluntary)
+                totalVoluntaryCollected: {
+                    $sum: {
+                        $reduce: {
+                            input: '$items',
+                            initialValue: 0,
+                            in: {
+                                $add: [
+                                    '$$value',
+                                    { $cond: [{ $eq: ['$$this.feeType', 'voluntary'] }, '$$this.paidAmount', 0] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]);
+
+    if (stats.length > 0) {
+        // 2. Cập nhật vào PaymentSession
+        await PaymentSession.findByIdAndUpdate(doc.paymentSession, {
+            totalExpectedMandatory: stats[0].totalExpectedMandatory,
+            totalPaidMandatory: stats[0].totalPaidMandatory,
+            totalVoluntaryCollected: stats[0].totalVoluntaryCollected
+        });
+    }
+});
 module.exports = mongoose.model('HouseholdPaymentDetail', householdPaymentDetailSchema);

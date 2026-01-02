@@ -16,6 +16,16 @@ import PaymentGrid from './PaymentGrid';
 //     { id: 2, name: 'Phí vệ sinh', price: 30000 },
 //     { id: 3, name: 'Phí gửi xe máy', price: 80000 },
 // ];
+const unitMap = {
+    area: 'm²',
+    car: 'ô tô',
+    bike: 'xe máy',
+    electricity: 'số điện',
+    water: 'mét khối nước',
+    person: 'người'
+};
+
+const getUnitName = (unit) => unitMap[unit] || unit;
 
 const PaymentCollectionPage = () => {
     // State quản lý danh sách đợt thu
@@ -302,38 +312,100 @@ const PaymentCollectionPage = () => {
                 </div>
             </div>
 
-            <Table
-                headers={[
-                    { label: 'Tên đợt thu', className: 'text-left'  }, 
-                    { label: 'Trạng thái', className: 'text-left'  }, 
-                    { label: 'Ngày bắt đầu', className: 'text-left'  }, 
-                    { label: 'Hành động', className: 'text-right' }]
-                }
-                data={sessions}
-                renderRow={(s) => (
-                    <tr key={s._id || s.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-6 font-bold text-blue-600">{s.title || s.name}</td>
-                        <td className="py-4 px-6">
-                            <span className={`${s.isActive ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'} border px-3 py-1 rounded-full text-xs font-bold`}>
-                                {s.isActive ? 'Đang hoạt động' : 'Đã kết thúc'}
-                            </span>
-                        </td>
-                        <td className="py-4 px-6">{new Date(s.startDate).toLocaleDateString('vi-VN')}</td>
-                        <td className="py-4 px-6">
-                            <div className='flex justify-end'>
-                                <button onClick={() => { setCurrentSession(s); setView('DETAIL'); }} className="text-blue-400 hover:text-blue-600">
-                                    <Eye size={18} className="mr-1" />
-                                </button>
-                                <button onClick={() => { handleDeleteSession(s._id) }} className="text-red-400 hover:text-red-600">
-                                    <Trash2 size={18} className="mr-1" />
-                                </button>
+            <div className="grid grid-cols-1 gap-6">
+                {sessions.map((s) => {
+                    // Giả sử backend trả về các trường tổng hợp này cho mỗi session
+                    const totalMandatory = s.totalExpectedMandatory || 0;
+                    const paidMandatory = s.totalPaidMandatory || 0;
+                    const totalVoluntary = s.totalVoluntaryCollected || 0;
+                    const progress = totalMandatory > 0 ? Math.round((paidMandatory / totalMandatory) * 100) : 0;
+
+                    return (
+                        <div 
+                            key={s._id || s.id} 
+                            className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all duration-300 overflow-hidden relative"
+                        >
+                            <div className="p-8">
+                                {/* Hàng 1: Tiêu đề và Trạng thái */}
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex flex-col gap-1">
+                                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                            {s.title}
+                                        </h3>
+                                        <p className="text-gray-400 font-medium text-lg">
+                                            {new Date(s.startDate).toLocaleDateString('vi-VN')} 
+                                            {s.endDate ? ` — ${new Date(s.endDate).toLocaleDateString('vi-VN')}` : ' — Hiện tại'}
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-3">
+                                        <span className={`${
+                                            s.isActive 
+                                            ? 'bg-green-500 text-white shadow-lg shadow-green-100' 
+                                            : 'bg-gray-400 text-white'
+                                        } px-6 py-2 rounded-xl text-sm font-bold transition-transform`}>
+                                            {s.isActive ? 'Đang hoạt động' : 'Đã kết thúc'}
+                                        </span>
+                                        
+                                        {/* Nút hành động nổi */}
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => { setCurrentSession(s); setView('DETAIL'); }}
+                                                className="p-3 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                                            >
+                                                <Eye size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteSession(s._id)}
+                                                className="p-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Hàng 2: Progress Bar tổng quát */}
+                                <div className="my-8">
+                                    <div className="flex justify-between items-end mb-3 font-black">
+                                        <span className="text-gray-500">Tiến độ thu phí bắt buộc</span>
+                                        <span className="text-xl text-blue-600">{progress}%</span>
+                                    </div>
+                                    <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden border-4 border-white shadow-inner">
+                                        <div 
+                                            className="h-full bg-linear-to-r from-blue-600 to-cyan-400 rounded-full transition-all duration-1000 ease-out"
+                                            style={{ width: `${progress}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                {/* Hàng 3: Chỉ số tài chính tổng hợp */}
+                                <div className="grid grid-cols-2 gap-8 border-t border-gray-50">
+                                    <div>
+                                        <p className="text-[10px] text-gray-400 uppercase font-bold">Tổng phí bắt buộc</p>
+                                        <p className="text-2xl text-gray-800">
+                                            {paidMandatory.toLocaleString()}đ 
+                                            <span className="text-gray-300 font-normal"> / {totalMandatory.toLocaleString()}đ</span>
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-emerald-400 uppercase font-bold">Tổng quỹ tự nguyện</p>
+                                        <p className="text-2xl text-emerald-600">
+                                            {totalVoluntary.toLocaleString()}đ
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            
-                        </td>
-                    </tr>
+                        </div>
+                    );
+                })}
+
+                {sessions.length === 0 && (
+                    <div className="py-20 text-center bg-gray-50 rounded-[40px] border-4 border-dashed border-gray-200">
+                        <p className="text-gray-400 text-xl font-bold italic">Chưa có đợt thu phí nào được tạo</p>
+                    </div>
                 )}
-                footerText={<>Tổng cộng: <span className="font-bold">{sessions.length}</span> đợt thu phí</>}
-            />
+            </div>
         </div>
     );
 
@@ -397,20 +469,59 @@ const PaymentCollectionPage = () => {
                         </button>
                     </div>
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {mandatoryAutoFees.map((f, idx) => (
-                            <div key={idx} className="p-3 border border-gray-100 rounded-2xl flex justify-between items-center group hover:bg-gray-50 transition-colors">
-                                <span className="font-bold text-gray-700">{f.fee?.name}</span>
-                                <span className="text-blue-600 font-bold text-xs">{Number(f.unitPrice).toLocaleString()} đ/{f.fee?.unit}</span>
-                                <button 
-                                    onClick={() => handleDeleteFee(f._id)}
-                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                    title="Xóa khoản phí này"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        ))}
-                        {mandatoryAutoFees.length === 0 && <p className="col-span-full text-center text-gray-400 text-xs italic py-2">Chưa có khoản thu nào</p>}
+                        {mandatoryAutoFees.map((f, idx) => {
+                            // Logic tính toán Progress cho từng khoản phí
+                            const relevantItems = householdDetails.flatMap(hd => 
+                                hd.items.filter(item => item.feeInSessionId === f.feeInSessionId || item.feeInSessionId === f._id)
+                            );
+                            
+                            const totalExpected = relevantItems.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
+                            const totalCollected = relevantItems.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
+                            const percentage = totalExpected > 0 ? Math.min(Math.round((totalCollected / totalExpected) * 100), 100) : 0;
+
+                            return (
+                                <div key={idx} className="p-4 border border-gray-100 rounded-2xl group hover:bg-gray-50 transition-colors flex flex-col gap-3 relative">
+                                    {/* Hàng 1: Tên phí và Nút xóa */}
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-gray-800 leading-tight">{f.fee?.name}</span>
+                                            <span className="text-blue-500 font-bold text-[10px] mt-1">
+                                                {Number(f.unitPrice).toLocaleString()} đ/{getUnitName(f.fee?.unit)}
+                                            </span>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleDeleteFee(f._id)}
+                                            className="p-2 bg-red-100 text-red-400 hover:text-red-600 hover:bg-red-200 rounded-lg transition-all"
+                                            title="Xóa khoản phí này"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+
+                                    {/* Hàng 2: Progress Bar */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between items-end text-[10px] font-bold">
+                                            <span className="text-gray-400 uppercase tracking-tighter">Đã thu: {totalCollected.toLocaleString()}đ</span>
+                                            <span className="text-blue-600">{percentage}%</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden border border-gray-50">
+                                            <div 
+                                                className="h-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-700 ease-out rounded-full"
+                                                style={{ width: `${percentage}%` }} // Sửa lỗi cú pháp style
+                                            ></div>
+                                        </div>
+                                        <p className="font-bold text-[10px] text-gray-400 text-right">
+                                            Mục tiêu: {totalExpected.toLocaleString()}đ
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {mandatoryAutoFees.length === 0 && (
+                            <p className="col-span-full text-center text-gray-400 text-xs italic py-2">
+                                Chưa có khoản thu nào
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -420,36 +531,71 @@ const PaymentCollectionPage = () => {
                         <span className="font-bold text-orange-700 text-sm uppercase">2. Bắt buộc - Thủ công (Điện, nước...)</span>
                     </div>
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {mandatoryManualFees.map((f, idx) => (
-                            <div key={idx} className="p-3 border border-gray-100 rounded-2xl flex justify-between items-center group hover:bg-gray-50 transition-colors">
-                                <div className="flex flex-col">
-                                    <span className="font-bold text-gray-700">{f.fee?.name}</span>
-                                    <span className="text-orange-600 font-bold text-xs">
-                                        {f.fee?.unit === 'default' 
-                                            ? 'Nhập thẳng số tiền' 
-                                            : `${Number(f.unitPrice).toLocaleString()}đ / ${f.fee?.unit || ''}`
-                                        }
-                                    </span>
+                        {mandatoryManualFees.map((f, idx) => {
+                            // Logic tính toán Progress dựa trên householdDetails
+                            const relevantItems = householdDetails.flatMap(hd => 
+                                hd.items.filter(item => item.feeInSessionId === f.feeInSessionId || item.feeInSessionId === f._id)
+                            );
+                            
+                            const totalExpected = relevantItems.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
+                            const totalCollected = relevantItems.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
+                            const percentage = totalExpected > 0 ? Math.min(Math.round((totalCollected / totalExpected) * 100), 100) : 0;
+
+                            return (
+                                <div key={idx} className="p-4 border border-gray-100 rounded-2xl group hover:bg-gray-50 transition-colors flex flex-col gap-3">
+                                    {/* Hàng 1: Thông tin phí và Nút chức năng */}
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-gray-700 leading-tight">{f.fee?.name}</span>
+                                            <span className="text-orange-600 font-bold text-[10px] mt-1">
+                                                {f.fee?.unit === 'default' 
+                                                    ? 'Nhập thẳng số tiền' 
+                                                    : `${Number(f.unitPrice).toLocaleString()}đ / ${getUnitName(f.fee?.unit) || ''}`
+                                                }
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button 
+                                                onClick={() => { setSelectedFeeForInput(f); setView('INPUT_MONEY'); }}
+                                                className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-all"
+                                                title="Nhập số liệu"
+                                            >
+                                                <DollarSign size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteFee(f._id)}
+                                                className="p-2 bg-red-100 text-red-400 hover:text-red-600 hover:bg-red-200 rounded-lg transition-all"
+                                                title="Xóa khoản phí này"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Hàng 2: Progress Bar */}
+                                    <div className="space-y-1.5 pt-1">
+                                        <div className="flex justify-between items-end text-[10px] font-bold">
+                                            <span className="text-gray-400 uppercase tracking-tighter">Đã thu: {totalCollected.toLocaleString()}đ</span>
+                                            <span className="text-orange-600">{percentage}%</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden border border-gray-50">
+                                            <div 
+                                                className="h-full bg-linear-to-r from-orange-400 to-red-400 transition-all duration-700 ease-out rounded-full"
+                                                style={{ width: `${percentage}%` }}
+                                            ></div>
+                                        </div>
+                                        <p className="font-bold text-[10px] text-gray-400 text-right">
+                                            <span>Mục tiêu: {totalExpected.toLocaleString()}đ</span>
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <button 
-                                        onClick={() => { setSelectedFeeForInput(f); setView('INPUT_MONEY'); }}
-                                        className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-all"
-                                        title="Nhập số liệu"
-                                    >
-                                        <DollarSign size={16} />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDeleteFee(f._id)}
-                                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                        title="Xóa khoản phí này"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                        {mandatoryManualFees.length === 0 && <p className="col-span-full text-center text-gray-400 text-xs italic py-2">Chưa có khoản thu nào</p>}
+                            );
+                        })}
+                        {mandatoryManualFees.length === 0 && (
+                            <p className="col-span-full text-center text-gray-400 text-xs italic py-2">
+                                Chưa có khoản thu nào
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -459,24 +605,53 @@ const PaymentCollectionPage = () => {
                         <span className="font-bold text-emerald-700 text-sm uppercase">3. Tự nguyện</span>
                     </div>
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {voluntaryFees.map((f, idx) => (
-                            <div key={idx} className="p-3 border border-gray-100 rounded-2xl flex justify-between items-center group hover:bg-gray-50 transition-colors">
-                                <span className="font-bold text-gray-700">{f.fee?.name}</span>
-                                <button 
-                                    onClick={() => handleDeleteFee(f._id)}
-                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                    title="Xóa khoản phí này"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        ))}
-                        {voluntaryFees.length === 0 && <p className="col-span-full text-center text-gray-400 text-xs italic py-2">Chưa có khoản thu nào</p>}
+                        {voluntaryFees.map((f, idx) => {
+                            // Lấy tất cả các item thuộc khoản phí tự nguyện này từ householdDetails
+                            const relevantItems = householdDetails.flatMap(hd => 
+                                hd.items.filter(item => item.feeInSessionId === f.feeInSessionId || item.feeInSessionId === f._id)
+                            );
+                            
+                            // Tính tổng số tiền thực thu
+                            const totalCollected = relevantItems.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
+                            // Đếm số hộ đã tham gia đóng góp (số tiền > 0)
+                            const donorCount = relevantItems.filter(i => (i.paidAmount || 0) > 0).length;
+
+                            return (
+                                <div key={idx} className="p-4 border border-gray-100 rounded-2xl group hover:bg-gray-50 transition-colors flex flex-col gap-3">
+                                    {/* Hàng 1: Tên phí và nút xóa */}
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-gray-700 leading-tight">{f.fee?.name}</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleDeleteFee(f._id)}
+                                            className="p-2 bg-red-100 text-red-400 hover:text-red-600 hover:bg-red-200 rounded-lg transition-all"
+                                            title="Xóa khoản phí này"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+
+                                    {/* Hàng 2: Hiển thị tổng quỹ thực tế */}
+                                    <div className="">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-emerald-600 font-bold text-[10px]">Tổng quỹ thu được: {totalCollected.toLocaleString('vi-VN')}đ</span>
+                                            <span className="text-[10px] text-gray-400 font-bold">{donorCount} hộ đóng góp</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {voluntaryFees.length === 0 && (
+                            <p className="col-span-full text-center text-gray-400 text-xs italic py-2">
+                                Chưa có khoản thu nào
+                            </p>
+                        )}
                     </div>
                 </div>
-            </div>
-        );
-    };
+                            </div>
+                        );
+                    };
 
     const referenceRecord = householdDetails.find(d => d.items && d.items.length > 0);
 

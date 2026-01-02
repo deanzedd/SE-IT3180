@@ -13,6 +13,9 @@ const paymentSessionSchema = mongoose.Schema({
             note: { type: String }
         }
     ],
+    totalExpectedMandatory: { type: Number, default: 0 },
+    totalPaidMandatory: { type: Number, default: 0 },
+    totalVoluntaryCollected: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
