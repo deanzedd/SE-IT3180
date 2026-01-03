@@ -16,6 +16,9 @@ const HouseholdPage = () => {
     const [editingHousehold, setEditingHousehold] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
+    const canEdit = ['admin', 'manager'].includes(user?.role);
+
     // Form data khớp với các input trên giao diện
     const [formData, setFormData] = useState({
         apartmentNumber: '', area: '', motorbikeNumber: '0', carNumber: '0', status: 'active'
@@ -47,8 +50,11 @@ const HouseholdPage = () => {
         { label: 'Số xe máy', className: 'text-left'},
         { label: 'Số ô tô', className: 'text-left'},
         { label: 'Trạng thái', className: 'text-left' },
-        { label: 'Thao tác', className: 'text-left' }
     ];
+
+    if (canEdit) {
+        tableHeaders.push({ label: 'Thao tác', className: 'text-left' });
+    }
 
     const renderHouseholdRow = (household) => (
         <tr key={household._id} className="hover:bg-gray-50 transition-colors">
@@ -69,6 +75,7 @@ const HouseholdPage = () => {
                     {household.status === 'active' ? 'Đang ở' : 'Trống'}
                 </span>
             </td>
+            {canEdit && (
             <td className="py-4 px-6">
                 <div className="flex gap-3">
                     <button onClick={() => handleOpenModal(household)} className="text-blue-400 hover:text-blue-600">
@@ -79,6 +86,7 @@ const HouseholdPage = () => {
                     </button>
                 </div>
             </td>
+            )}
         </tr>
     );
 
@@ -161,9 +169,11 @@ const HouseholdPage = () => {
                     <Button onClick={handleExportExcel} className="bg-white text-green-600 border border-green-200 hover:bg-green-500 shadow-sm">
                         <FileSpreadsheet className="w-5 h-5 mr-1" /> Xuất Excel
                     </Button>
+                    {canEdit && (
                     <Button onClick={() => handleOpenModal()} className="bg-linear-to-r from-blue-500 to-cyan-500">
                         <Plus className="w-5 h-5" /> Thêm hộ khẩu
                     </Button>
+                    )}
                 </div>
             </div>
 

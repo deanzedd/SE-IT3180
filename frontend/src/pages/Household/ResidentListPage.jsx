@@ -30,6 +30,9 @@ const ResidentListPage = () => {
     const [aptSearch, setAptSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
 
+    // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
+    const canEdit = ['admin', 'manager'].includes(user?.role);
+
     // Lọc danh sách căn hộ dựa trên số phòng người dùng nhập
     const suggestedHouseholds = households.filter(h => 
         h.apartmentNumber.toLowerCase().includes(aptSearch.toLowerCase())
@@ -102,8 +105,11 @@ const ResidentListPage = () => {
         { label: 'Căn hộ', className: 'text-left' },
         { label: 'Quan hệ', className: 'text-left' },
         { label: 'Trạng thái', className: 'text-left' },
-        { label: 'Thao tác', className: 'text-left' }
     ];
+
+    if (canEdit) {
+        tableHeaders.push({ label: 'Thao tác', className: 'text-left' });
+    }
 
     const renderResidentRow = (resident) => (
         <tr key={resident._id} className="hover:bg-gray-50 transition-colors">
@@ -137,6 +143,7 @@ const ResidentListPage = () => {
                      resident.status === 'temporary_absence' ? 'Tạm vắng' : 'Thường trú'}
                 </span>
             </td>
+            {canEdit && (
             <td className="py-4 px-6">
                 <div className="flex gap-3">
                     <button onClick={() => {
@@ -150,6 +157,7 @@ const ResidentListPage = () => {
                     </button>
                 </div>
             </td>
+            )}
         </tr>
     );
     const handleOpenModal = (resident = null) => {
@@ -233,6 +241,7 @@ const ResidentListPage = () => {
                         <FileSpreadsheet className="w-5 h-5 mr-1" />
                         Xuất Excel
                     </Button>
+                    {canEdit && (
                     <Button
                         onClick={() => handleOpenModal()}
                         className="bg-linear-to-r from-blue-500 to-cyan-500"
@@ -240,6 +249,7 @@ const ResidentListPage = () => {
                         <Plus className="w-5 h-5" />
                         Thêm nhân khẩu
                     </Button>
+                    )}
                 </div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">

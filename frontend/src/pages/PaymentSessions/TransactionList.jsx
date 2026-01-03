@@ -13,6 +13,10 @@ const TransactionList = ({ session, households }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddModalOpen, setAddModalOpen] = useState(false);
     const { user } = useAuth();
+
+    // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
+    const canEdit = ['admin', 'accountant'].includes(user?.role);
+
     // 3. Tải dữ liệu ban đầu
     useEffect(() => {
         if (session) {
@@ -88,6 +92,7 @@ const TransactionList = ({ session, households }) => {
                             </p>
                         </div>
                         
+                        {canEdit && (
                         <div className="flex gap-1">
                             <button 
                                 onClick={() => handleToggleStatus(t._id, t.status)}
@@ -100,6 +105,7 @@ const TransactionList = ({ session, households }) => {
                                 <Trash2 size={16} />
                             </button>
                         </div>
+                        )}
                     </div>
 
                     <div className="mt-1 text-[11px] font-bold grid grid-cols-3">
@@ -126,9 +132,11 @@ const TransactionList = ({ session, households }) => {
         <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl p-6 h-full flex flex-col max-w-xl ml-auto">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">Giao dịch gần đây</h2>
+                {canEdit && (
                 <Button onClick={() => setAddModalOpen(true)} className="bg-linear-to-r from-blue-500 to-cyan-500">
                     <Plus className="w-4 h-4 mr-1" /> Thêm mới
                 </Button>
+                )}
             </div>
 
             <div className="mb-4">

@@ -11,6 +11,7 @@ import feeApi from '../../api/feeApi';
 import householdApi from '../../api/householdApi';
 import TransactionList from '../PaymentSessions/TransactionList';
 import PaymentGrid from './PaymentGrid';
+import { useAuth } from '../../context/AuthContext';
 // const existingFeeTypes = [
 //     { id: 1, name: 'Phí quản lý chung cư', price: 7000 },
 //     { id: 2, name: 'Phí vệ sinh', price: 30000 },
@@ -29,6 +30,7 @@ const getUnitName = (unit) => unitMap[unit] || unit;
 
 const PaymentCollectionPage = () => {
     // State quản lý danh sách đợt thu
+    const { user } = useAuth();
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     
@@ -60,6 +62,9 @@ const PaymentCollectionPage = () => {
     //Danh sách khoản phí
     const [allFees, setAllFees] = useState([]);
     const [householdDetails, setHouseholdDetails] = useState([]);
+
+    // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
+    const canEdit = ['admin', 'accountant'].includes(user?.role);
 
     const fetchSessions = async () => {
         try {
@@ -297,9 +302,11 @@ const PaymentCollectionPage = () => {
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Quản lý đợt thu</h2>
                 </div>
+                {canEdit && (
                 <Button onClick={() => setCreateModalOpen(true)} className="bg-linear-to-r from-blue-600 to-cyan-500">
                     <Plus className="w-5 h-5 mr-1" /> Tạo đợt thu
                 </Button>
+                )}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex items-center gap-3">
@@ -355,12 +362,14 @@ const PaymentCollectionPage = () => {
                                             >
                                                 <Eye size={14} />
                                             </button>
+                                            {canEdit && (
                                             <button 
                                                 onClick={() => handleDeleteSession(s._id)}
                                                 className="p-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
                                             >
                                                 <Trash2 size={14} />
                                             </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -452,21 +461,25 @@ const PaymentCollectionPage = () => {
                     <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                         <ListCheck className="text-blue-600" /> Danh sách các khoản thu
                     </h3>
+                    {canEdit && (
                     <Button onClick={() => setIsAddFeeModalOpen(true)} className="bg-linear-to-r from-blue-600 to-cyan-500 py-2">
                         <Plus className="mr-1" size={18}/> Thêm khoản thu
                     </Button>
+                    )}
                 </div>
 
                 {/* --- NHÓM 1: BẮT BUỘC - TỰ ĐỘNG --- */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="p-4 bg-blue-50/50 border-b border-blue-100 flex justify-between items-center">
                         <span className="font-bold text-blue-700 text-sm uppercase">1. Bắt buộc - Tự động (Hệ thống tính)</span>
+                        {canEdit && (
                         <button 
                             onClick={handleUpdateAutoFees}
                             className="px-4 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-md shadow-blue-200"
                         >
                             <CheckCircle size={14} /> Cập nhật phí
                         </button>
+                        )}
                     </div>
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {mandatoryAutoFees.map((f, idx) => {
@@ -489,6 +502,7 @@ const PaymentCollectionPage = () => {
                                                 {Number(f.unitPrice).toLocaleString()} đ/{getUnitName(f.fee?.unit)}
                                             </span>
                                         </div>
+                                        {canEdit && (
                                         <button 
                                             onClick={() => handleDeleteFee(f._id)}
                                             className="p-2 bg-red-100 text-red-400 hover:text-red-600 hover:bg-red-200 rounded-lg transition-all"
@@ -496,6 +510,7 @@ const PaymentCollectionPage = () => {
                                         >
                                             <Trash2 size={14} />
                                         </button>
+                                        )}
                                     </div>
 
                                     {/* Hàng 2: Progress Bar */}
@@ -555,6 +570,7 @@ const PaymentCollectionPage = () => {
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
+                                            {canEdit && (
                                             <button 
                                                 onClick={() => { setSelectedFeeForInput(f); setView('INPUT_MONEY'); }}
                                                 className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-all"
@@ -562,6 +578,8 @@ const PaymentCollectionPage = () => {
                                             >
                                                 <DollarSign size={14} />
                                             </button>
+                                            )}
+                                            {canEdit && (
                                             <button 
                                                 onClick={() => handleDeleteFee(f._id)}
                                                 className="p-2 bg-red-100 text-red-400 hover:text-red-600 hover:bg-red-200 rounded-lg transition-all"
@@ -569,6 +587,7 @@ const PaymentCollectionPage = () => {
                                             >
                                                 <Trash2 size={14} />
                                             </button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -623,6 +642,7 @@ const PaymentCollectionPage = () => {
                                         <div className="flex flex-col">
                                             <span className="font-bold text-gray-700 leading-tight">{f.fee?.name}</span>
                                         </div>
+                                        {canEdit && (
                                         <button 
                                             onClick={() => handleDeleteFee(f._id)}
                                             className="p-2 bg-red-100 text-red-400 hover:text-red-600 hover:bg-red-200 rounded-lg transition-all"
@@ -630,6 +650,7 @@ const PaymentCollectionPage = () => {
                                         >
                                             <Trash2 size={14} />
                                         </button>
+                                        )}
                                     </div>
 
                                     {/* Hàng 2: Hiển thị tổng quỹ thực tế */}
@@ -793,6 +814,7 @@ const PaymentCollectionPage = () => {
                             <PaymentGrid 
                                 details={householdDetails}
                                 feeHeaders={feeHeaders}
+                                readOnly={!canEdit}
                                 
                                 // Xử lý khi click vào ô thường (Bật/Tắt màu xanh)
                                 onCellClick={handleToggleCell}

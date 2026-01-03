@@ -6,13 +6,18 @@ import { Button } from '../../components/common/Button';
 import SearchBar from '../../components/common/SearchBar';
 import AddFeeModal from './AddFeeModal';
 import feeApi from '../../api/feeApi';
+import { useAuth } from '../../context/AuthContext';
 
 const FeeManagerPage = () => {
+    const { user } = useAuth();
     const [fees, setFees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingFee, setEditingFee] = useState(null);
+
+    // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
+    const canEdit = ['admin', 'accountant'].includes(user?.role);
 
     useEffect(() => {
         fetchFees();
@@ -36,8 +41,11 @@ const FeeManagerPage = () => {
         { label: 'Tính theo', className: 'text-left' },
         { label: 'Loại', className: 'text-left' },
         { label: 'Mô tả', className: 'text-left' },
-        { label: 'Thao tác', className: 'text-left' },
     ];
+
+    if (canEdit) {
+        headers.push({ label: 'Thao tác', className: 'text-left' });
+    }
 
     const renderRow = (item, index) => (
         <tr key={item._id} className="hover:bg-gray-50 transition-colors">
@@ -60,6 +68,7 @@ const FeeManagerPage = () => {
                 </span>
             </td>
             <td className="py-4 px-6 text-gray-500 italic truncate max-w-xs">{item.description}</td>
+            {canEdit && (
             <td className="py-4 px-6">
                 <div className="flex gap-3">
                     <button onClick={() => handleOpenModal(item)} className="flex items-center justify-center w-7 h-7 rounded-md text-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
@@ -70,6 +79,7 @@ const FeeManagerPage = () => {
                     </button>
                 </div>
             </td>
+            )}
         </tr>
     );
 
@@ -126,12 +136,14 @@ const FeeManagerPage = () => {
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Quản lý khoản thu</h2>
                 </div>
                 {/* Button: Chỉ để bg-gradient, không set text-color */}
+                {canEdit && (
                 <Button
                     onClick={() => handleOpenModal()}
                     className="bg-linear-to-r from-blue-500 to-cyan-500"
                 >
                     Thêm khoản thu
                 </Button>
+                )}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">

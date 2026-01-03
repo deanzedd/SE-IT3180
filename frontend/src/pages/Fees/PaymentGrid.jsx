@@ -6,6 +6,7 @@ const PaymentGrid = ({
     feeHeaders,        // Danh sách các loại phí (để render cột)
     onCellClick,       // Hàm xử lý khi click vào ô thường (toggle)
     onVoluntaryChange, // Hàm xử lý khi nhập tiền tự nguyện
+    readOnly = false,  // Chế độ chỉ xem
     className 
 }) => {
     // Helper: Format tiền tệ
@@ -68,7 +69,7 @@ const PaymentGrid = ({
                                             : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border-gray-200'
                                         }`}
                                     title={row.totalPaidAmount >= row.totalBill ? "Đã hoàn thành toàn bộ" : "Click để thanh toán toàn bộ phí bắt buộc"}
-                                    onClick={() => onCellClick(row, 'ALL_MANDATORY')}
+                                    onClick={() => !readOnly && onCellClick(row, 'ALL_MANDATORY')}
                                 >
                                     {formatCurrency(row.totalBill)}
                                 </td>
@@ -99,6 +100,7 @@ const PaymentGrid = ({
                                             <td key={item._id} className={`p-2 border-b border-gray-200 text-center transition-colors ${hasValue ? 'bg-green-500' : 'bg-white'}`}>
                                                 <input 
                                                     type="number" 
+                                                    disabled={readOnly}
                                                     className={`w-full text-right p-1 border rounded outline-none text-sm font-bold transition-all
                                                         ${hasValue ? 'bg-green-500 border-gray-200 text-white placeholder-green-300' : 'bg-white border-gray-200 text-gray-700'}`}
                                                     placeholder="0"
@@ -132,9 +134,9 @@ const PaymentGrid = ({
                                     return (
                                         <td 
                                             key={item._id} 
-                                            className={`p-3 border-b border-gray-200 text-center cursor-pointer transition-all select-none
+                                            className={`p-3 border-b border-gray-200 text-center ${!readOnly ? 'cursor-pointer' : ''} transition-all select-none
                                                 ${isPaid ? 'bg-green-500 text-white font-bold' : 'text-gray-400 font-medium hover:bg-green-100'}`}
-                                            onClick={() => onCellClick(row, item)}
+                                            onClick={() => !readOnly && onCellClick(row, item)}
                                         >
                                             {formatCurrency(item.totalAmount)}
                                         </td>

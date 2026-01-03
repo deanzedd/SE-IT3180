@@ -9,8 +9,10 @@ import residentsApi from '../../api/residentsApi';
 import householdApi from '../../api/householdApi';
 import ResidenceChangeModal from './ResidenceChangeModal';
 import { exportToExcel } from '../../utils/excelHandle';
+import { useAuth } from '../../context/AuthContext';
 
 const ResidenceChangePage = () => {
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [changes, setChanges] = useState([]);
     const [residents, setResidents] = useState([]);
@@ -20,6 +22,9 @@ const ResidenceChangePage = () => {
     const [activeTab, setActiveTab] = useState('temporary_residence');
     const [editingChange, setEditingChange] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
+    const canEdit = ['admin', 'manager'].includes(user?.role);
 
     const fetchData = async () => {
         try {
@@ -66,8 +71,11 @@ const ResidenceChangePage = () => {
         { label: 'Ngày kết thúc', className: 'text-left' },
         { label: activeTab === 'temporary_residence' ? 'Căn hộ tạm trú' : 'Nơi đến', className: 'text-left' },
         { label: 'Ghi chú', className: 'text-left' },
-        { label: 'Thao tác', className: 'text-left' }
     ];
+
+    if (canEdit) {
+        headers.push({ label: 'Thao tác', className: 'text-left' });
+    }
 
     const handleEdit = (item) => {
         setEditingChange(item);
@@ -128,6 +136,7 @@ const ResidenceChangePage = () => {
                 }
             </td>
             <td className="py-4 px-6 text-gray-500 italic">{item.note}</td>
+            {canEdit && (
             <td className="py-4 px-6">
                 <div className="flex gap-3">
                     <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-700 transition-colors">
@@ -138,6 +147,7 @@ const ResidenceChangePage = () => {
                     </button>
                 </div>
             </td>
+            )}
         </tr>
     );
 
@@ -154,9 +164,11 @@ const ResidenceChangePage = () => {
                     <Button onClick={handleExportExcel} className="bg-white text-green-600 border border-green-200 hover:bg-green-500 shadow-sm">
                         <FileSpreadsheet className="w-5 h-5 mr-1" /> Xuất Excel
                     </Button>
+                    {canEdit && (
                     <Button onClick={() => { setEditingChange(null); setIsModalOpen(true); }} className="bg-linear-to-r from-blue-500 to-cyan-500  min-w-[220px]">
                         <Plus className="w-5 h-5 mr-1" /> Thêm biến đổi nhân khẩu
                     </Button>
+                    )}
                 </div>
             </div>
 
