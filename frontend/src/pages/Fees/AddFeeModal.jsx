@@ -7,26 +7,57 @@ const AddFeeModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
         name: '',
         unitPrice: '',
         unit: '',
-        type: 'Bắt buộc',
+        type: '',
         description: ''
     });
 
     // Cập nhật form khi initialData thay đổi (dùng cho trường hợp Edit)
     useEffect(() => {
         if (initialData) {
-            setFormData(initialData);
+            // Map backend enum values to Vietnamese labels
+            const typeMap = {
+                'Bắt buộc (Tự động tính)': 'mandatory_automatic',
+                'Bắt buộc (Nhập thủ công)': 'mandatory_manual',
+                'Tự nguyện': 'voluntary'
+            };
+            setFormData({
+                ...initialData,
+                type: typeMap[initialData.type] || initialData.type
+            });
         } else {
-            setFormData({ name: '', unitPrice: '', unit: '', type: 'Bắt buộc', description: '' });
+            setFormData({ name: '', unitPrice: '', unit: '', type: 'mandatory_automatic', description: '' });
         }
     }, [initialData, isOpen]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Chuyển đổi unitPrice sang số trước khi gửi đi
-        onSubmit({ ...formData, unitPrice: Number(formData.unitPrice) });
+        
+        // 1. Tạo một bản sao dữ liệu để xử lý
+        let payload = {
+            ...formData,
+            unitPrice: formData.unitPrice ? Number(formData.unitPrice) : 0
+        };
+
+        // 2. Xử lý trường hợp "Tự nguyện"
+        if (formData.type === 'voluntary') {
+            payload.unit = null;
+            payload.unitPrice = 0; // Hoặc null tùy vào Backend Schema của bạn
+        } 
+        // 3. Xử lý trường hợp "Không đơn vị" (default)
+        else if (formData.unit === 'default') {
+            payload.unit = 'default'; // Giữ là 'default' nếu Backend enum có giá trị này
+            payload.unitPrice = null;
+            // Nếu Backend muốn null cho trường hợp này, hãy dùng: payload.unit = null;
+        }
+
+        // 4. Đảm bảo nếu unit là chuỗi rỗng thì chuyển thành null
+        if (payload.unit === "") {
+            payload.unitPrice = null;
+        }
+
+        onSubmit(payload);
         onClose();
     };
-
     return (
         <Modal isOpen={isOpen} onClose={onClose}>
             <div className="p-6">
@@ -43,28 +74,7 @@ const AddFeeModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
                             required 
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Đơn giá (VND)</label>
-                            <input 
-                                type="number" 
-                                value={formData.unitPrice} 
-                                onChange={e => setFormData({ ...formData, unitPrice: e.target.value })} 
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                                required 
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Đơn vị tính</label>
-                            <input 
-                                value={formData.unit} 
-                                onChange={e => setFormData({ ...formData, unit: e.target.value })} 
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                                required 
-                                placeholder="VD: m2, hộ" 
-                            />
-                        </div>
-                    </div>
+                    
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Loại phí</label>
                         <select 
@@ -72,10 +82,67 @@ const AddFeeModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
                             onChange={e => setFormData({ ...formData, type: e.target.value })} 
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="Bắt buộc">Bắt buộc</option>
-                            <option value="Tự nguyện">Tự nguyện</option>
+                            <option value="mandatory_automatic">Bắt buộc (Tự động tính)</option>
+                            <option value="mandatory_manual">Bắt buộc (Nhập thủ công)</option>
+                            <option value="voluntary">Tự nguyện</option>
                         </select>
                     </div>
+
+                    {formData.type !== 'voluntary' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Đơn giá (VND)
+                                    </label>
+                                    <input 
+                                        type="number" 
+                                        value={formData.unitPrice} 
+                                        onChange={e => setFormData({ ...formData, unitPrice: e.target.value })} 
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                        required 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Tính theo
+                                    </label>
+                                    <select 
+                                        value={formData.unit} 
+                                        onChange={e => setFormData({ ...formData, unit: e.target.value })} 
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        required
+                                    >
+                                        <option value="">-- Chọn cách tính --</option>
+                                        {formData.type === 'mandatory_automatic' ? (
+                                            <>
+                                                <option value="area">Diện tích căn hộ (m²)</option>
+                                                <option value="person">Số người</option>
+                                                <option value="household">Hộ gia đình</option>
+                                                <option value="car">Ô tô</option>
+                                                <option value="bike">Xe máy</option>
+                                                <option value="fixed">Cố định</option>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <option value="electricity">kWh (Điện)</option>
+                                                <option value="m^3">m³ (Nước)</option>
+                                                <option value="default">Không đơn vị</option>
+                                            </>
+                                        )}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            {formData.type === 'mandatory_manual' && (
+                                <div className="text-xs text-amber-600 italic bg-amber-50 p-2 rounded-lg border border-amber-100"> 
+                                    <strong>Chú ý:</strong> Nếu không có đơn vị tính (nhập thẳng số tiền) thì chọn "Không đơn vị".
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
                         <textarea 

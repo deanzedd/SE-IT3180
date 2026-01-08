@@ -2,10 +2,22 @@
 const mongoose = require('mongoose');
 
 const feeSchema = mongoose.Schema({
-    name: { type: String, required: true }, // Tên khoản thu (Vệ sinh, Gửi xe)
-    type: { type: String, enum: ['mandatory', 'voluntary'], required: true }, // Bắt buộc / Tự nguyện
-    unitPrice: { type: Number, required: true }, // Đơn giá (VD: 6000đ/m2)
-    unit: { type: String, enum: ['m2', 'person', 'household', 'fixed'], required: true }, // Đơn vị tính
+    name: { type: String, required: true },
+    type: { 
+        type: String, 
+        enum: ['mandatory_automatic', 'mandatory_manual', 'voluntary'], 
+        required: true 
+    },
+    unitPrice: { 
+        type: Number, 
+        required: function() { return this.type === 'mandatory_automatic'; } 
+    },
+    unit: { 
+        type: String, 
+        // THÊM 'm^3', 'electricity', 'default' VÀO ĐÂY
+        enum: ['area', 'person', 'household', 'bike', 'car', 'fixed', 'm^3', 'electricity', 'default'], 
+        required: function() { return this.type !== 'voluntary'; } // Cập nhật lại điều kiện nếu cần
+    },
     description: String
 }, { timestamps: true });
 

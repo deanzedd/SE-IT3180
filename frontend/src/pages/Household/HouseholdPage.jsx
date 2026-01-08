@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Plus, Edit, Trash2, User, Home as HomeIcon } from 'lucide-react';
+import householdApi from '../../api/householdApi';
+import { Plus, Edit, Trash2, User, Home as HomeIcon, FileSpreadsheet } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button.jsx';
 import SearchBar from '../../components/common/SearchBar.jsx';
 import Table from '../../components/common/Table.jsx';
 import { useAuth } from '../../context/AuthContext'; // Lấy user từ context
+import { exportToExcel } from '../../utils/excelHandle';
 
 const HouseholdPage = () => {
     const { user } = useAuth(); // Lấy thông tin user đã đăng nhập
@@ -15,9 +16,12 @@ const HouseholdPage = () => {
     const [editingHousehold, setEditingHousehold] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
+    const canEdit = ['admin', 'manager'].includes(user?.role);
+
     // Form data khớp với các input trên giao diện
     const [formData, setFormData] = useState({
-        apartmentNumber: '', ownerName: '', phone: '', area: '', membersCount: '0', motorbikeNumber: '0', carNumber: '0', status: 'active'
+        apartmentNumber: '', area: '', motorbikeNumber: '0', carNumber: '0', status: 'active'
     });
 
     useEffect(() => {
@@ -28,12 +32,11 @@ const HouseholdPage = () => {
 
     const fetchHouseholds = async () => {
         try {
-            setLoading(false);
-            const config = { headers: { Authorization: `Bearer ${user.token}` } };
-            const response = await axios.get('http://localhost:5000/api/households', config);
+            setLoading(true);
+            const response = await householdApi.getAll();
             setHouseholds(response.data);
         } catch (error) {
-            console.error("Lỗi tải dữ liệu:", error);
+            console.error('Lỗi tải dữ liệu:', error);
         } finally {
             setLoading(false);
         }
@@ -44,10 +47,14 @@ const HouseholdPage = () => {
         { label: 'Chủ hộ', className: 'text-left'},
         { label: 'Diện tích', className: 'text-left'},
         { label: 'Thành viên', className: 'text-left'},
-        { label: 'Xe cộ (Máy/Ô tô)', className: 'text-left'},
+        { label: 'Số xe máy', className: 'text-left'},
+        { label: 'Số ô tô', className: 'text-left'},
         { label: 'Trạng thái', className: 'text-left' },
-        { label: 'Thao tác', className: 'text-left' }
     ];
+
+    if (canEdit) {
+        tableHeaders.push({ label: 'Thao tác', className: 'text-left' });
+    }
 
     const renderHouseholdRow = (household) => (
         <tr key={household._id} className="hover:bg-gray-50 transition-colors">
@@ -56,12 +63,11 @@ const HouseholdPage = () => {
                     {household.apartmentNumber}
                 </span>
             </td>
-            <td className="text-left py-4 px-6">{household.ownerName}</td>
+            <td className="text-left py-4 px-6">{household.ownerName || 'Trống'}</td>
             <td className="text-left py-4 px-6">{household.area}m²</td>
             <td className="text-left py-4 px-6">{household.members?.length || 0}</td>
-            <td className="text-left py-4 px-6">
-                {household.motorbikeNumber} / {household.carNumber}
-            </td>
+            <td className="text-left py-4 px-6">{household.motorbikeNumber}</td>
+            <td className="text-left py-4 px-6">{household.carNumber}</td>
             <td className="text-left py-4 px-6">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     household.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
@@ -69,6 +75,7 @@ const HouseholdPage = () => {
                     {household.status === 'active' ? 'Đang ở' : 'Trống'}
                 </span>
             </td>
+            {canEdit && (
             <td className="py-4 px-6">
                 <div className="flex gap-3">
                     <button onClick={() => handleOpenModal(household)} className="text-blue-400 hover:text-blue-600">
@@ -79,20 +86,33 @@ const HouseholdPage = () => {
                     </button>
                 </div>
             </td>
+            )}
         </tr>
     );
 
     const filteredHouseholds = households.filter(h =>
-        h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        h.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
+        h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleExportExcel = () => {
+        const dataToExport = filteredHouseholds.map(h => ({
+            "Số phòng": h.apartmentNumber,
+            "Chủ hộ": h.ownerName || 'Trống',
+            "Diện tích (m2)": h.area,
+            "Số thành viên": h.members?.length || 0,
+            "Số xe máy": h.motorbikeNumber,
+            "Số ô tô": h.carNumber,
+            "Trạng thái": h.status === 'active' ? 'Đang ở' : 'Trống'
+        }));
+
+        exportToExcel(dataToExport, "Danh_sach_ho_khau.xlsx", "Danh sách hộ khẩu");
+    };
 
     const handleOpenModal = (household = null) => {
         if (household) {
             setEditingHousehold(household);
             setFormData({
                 apartmentNumber: household.apartmentNumber,
-                ownerName: household.ownerName,
                 area: household.area.toString(),
                 motorbikeNumber: household.motorbikeNumber.toString(),
                 carNumber: household.carNumber.toString(),
@@ -100,17 +120,15 @@ const HouseholdPage = () => {
             });
         } else {
             setEditingHousehold(null);
-            setFormData({ apartmentNumber: '', ownerName: '', area: '', motorbikeNumber: '0', carNumber: '0', status: 'active' });
+            setFormData({ apartmentNumber: '', area: '', motorbikeNumber: '0', carNumber: '0', status: 'active' });
         }
         setIsModalOpen(true);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const config = { headers: { Authorization: `Bearer ${user.token}` } };
         const data = {
             apartmentNumber: formData.apartmentNumber,
-            ownerName: formData.ownerName,
             area: Number(formData.area),
             motorbikeNumber: Number(formData.motorbikeNumber),
             carNumber: Number(formData.carNumber),
@@ -119,9 +137,9 @@ const HouseholdPage = () => {
 
         try {
             if (editingHousehold) {
-                await axios.put(`http://localhost:5000/api/households/${editingHousehold._id}`, data, config);
+                await householdApi.update(editingHousehold._id, data);
             } else {
-                await axios.post('http://localhost:5000/api/households', data, config);
+                await householdApi.create(data);
             }
             fetchHouseholds();
             setIsModalOpen(false);
@@ -132,13 +150,12 @@ const HouseholdPage = () => {
 
     const handleDelete = async (id) => {
         if (window.confirm('Xác nhận xóa hộ khẩu?')) {
-            try {
-                const config = { headers: { Authorization: `Bearer ${user.token}` } };
-                await axios.delete(`http://localhost:5000/api/households/${id}`, config);
-                fetchHouseholds();
-            } catch (error) {
-                alert("Lỗi khi xóa");
-            }
+                try {
+                    await householdApi.remove(id);
+                    fetchHouseholds();
+                } catch (error) {
+                    alert('Lỗi khi xóa');
+                }
         }
     };
 
@@ -147,10 +164,17 @@ const HouseholdPage = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">Quản lý hộ khẩu</h2>
-                <Button onClick={() => handleOpenModal()} className="bg-linear-to-r from-blue-500 to-cyan-500">
-                    <Plus className="w-5 h-5" /> Thêm hộ khẩu
-                </Button>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Quản lý hộ khẩu</h2>
+                <div className="flex gap-3">
+                    <Button onClick={handleExportExcel} className="bg-white text-green-600 border border-green-200 hover:bg-green-500 shadow-sm">
+                        <FileSpreadsheet className="w-5 h-5 mr-1" /> Xuất Excel
+                    </Button>
+                    {canEdit && (
+                    <Button onClick={() => handleOpenModal()} className="bg-linear-to-r from-blue-500 to-cyan-500">
+                        <Plus className="w-5 h-5" /> Thêm hộ khẩu
+                    </Button>
+                    )}
+                </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between gap-4">
@@ -164,7 +188,7 @@ const HouseholdPage = () => {
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
-                    <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Tìm kiếm căn hộ, chủ hộ..." />
+                    <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Tìm kiếm căn hộ..." />
                 </div>
             </div>
 
@@ -188,10 +212,6 @@ const HouseholdPage = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Diện tích (m²)</label>
                                 <input type="number" value={formData.area} onChange={(e) => setFormData({ ...formData, area: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Tên chủ hộ</label>
-                            <input value={formData.ownerName} onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>

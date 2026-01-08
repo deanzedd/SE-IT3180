@@ -16,13 +16,34 @@ Authorization: Bearer {{token}}
 
 {
     "name": "Phí Dịch vụ Quý 4",
-    "type": "mandatory",
+    "type": "mandatory_automatic",
     "unitPrice": 16500,
-    "unit": "m2",
+    "unit": "area",
     "description": "Phí dịch vụ chung cư tính theo mét vuông"
 }
+###
+POST {{host}}/api/fees
+Content-Type: application/json
+Authorization: Bearer {{token}}
 
+{
+    "name": "Phí nước",
+    "type": "mandatory_manual",
+    "unitPrice": 5000,
+    "unit": "m^3",
+    "description": ""
+}
+###
+POST {{host}}/api/fees
+Content-Type: application/json
+Authorization: Bearer {{token}}
 
+{
+    "name": "Quỹ từ thiệns",
+    "type": "voluntary",
+    "unitPrice": "",
+    "description": ""
+}
 ### --- KIỂM THỬ 3: LẤY MỘT KHOẢN THU VỪA TẠO (GET by ID) ---
 # LƯU Ý: Phải copy ID Khoản thu vừa tạo ở bước 2 vào biến @feeIdToUpdate
 @feeIdToEdit = 6933a2556b82f86bb7ee9432

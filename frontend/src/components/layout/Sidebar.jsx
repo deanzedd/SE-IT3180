@@ -23,44 +23,42 @@ const Sidebar = () => {
             label: 'Tổng quan',
             path: '/',
             icon: LayoutDashboard,
-            // roles: ['admin', 'manager', 'accountant'] // Tạm bỏ comment để hiện hết khi test
+            roles: ['admin', 'manager', 'accountant']
         },
         {
             label: 'Quản lý hộ khẩu',
             path: '/ho-khau',
             icon: Home,
-            // roles: ['manager', 'admin'] 
+            roles: ['admin', 'manager', 'accountant']
         },
         {
             label: 'Quản lý nhân khẩu',
             path: '/nhan-khau',
             icon: Users,
-            // roles: ['manager', 'admin'] 
+            roles: ['admin', 'manager', 'accountant']
         },
         {
             label: 'Quản lý khoản thu',
             path: '/quan-ly-phi',
             icon: ReceiptText,
-            // roles: ['accountant', 'admin']
+            roles: ['admin', 'manager', 'accountant']
         },
         {
             label: 'Quản lý đợt thu', // Thêm mục này
             path: '/dot-thu',
             icon: CalendarCheck,
-            // roles: ['accountant', 'admin']
+            roles: ['admin', 'manager', 'accountant']
         },
         {
             label: 'Quản lý người dùng',
             path: '/nguoi-dung',
             icon: UserCog,
-            // roles: ['admin']
+            roles: ['admin']
         },
     ];
 
-    // Tạm thời hiển thị hết menu để test giao diện
-    // Sau này muốn phân quyền thì bỏ comment dòng dưới:
-    // const filteredMenu = menuConfig.filter(item => item.roles.includes(user?.role));
-    const filteredMenu = menuConfig;
+    // Lọc menu dựa trên role của user hiện tại
+    const filteredMenu = menuConfig.filter(item => item.roles.includes(user?.role));
 
     const handleLogout = () => {
         logout();

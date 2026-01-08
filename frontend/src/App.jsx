@@ -7,12 +7,14 @@ import LoginPage from './pages/Auth/LoginPage';
 import Dashboard from './pages/Dashboard/DashboardPage';
 import HouseholdPage from './pages/Household/HouseholdPage'; // Trang hộ khẩu
 import ResidentListPage from './pages/Household/ResidentListPage';   // Trang nhân khẩu
+import ResidenceChangePage from './pages/Household/ResidenceChangePage'; // Trang biến đổi nhân khẩu
 import FeeManagerPage from './pages/Fees/FeeManagerPage';    // Trang khoản thu
 import PaymentCollectionPage from './pages/Fees/PaymentCollectionPage'; // Trang đợt thu
 import UserManagementPage from './pages/Admin/UserManagementPage'; // Trang quản lý user
 
 // Import Sidebar (Nếu bạn chưa có file này, hãy tạo nó trong components/layout/Sidebar.jsx)
 import Sidebar from './components/layout/Sidebar';
+import TransactionList from './pages/PaymentSessions/TransactionList';
 
 // Layout chính cho phần Dashboard (Có Sidebar)
 const DashboardLayout = () => {
@@ -41,6 +43,15 @@ const PrivateRoute = ({ children }) => {
     return user ? children : <Navigate to="/login" />;
 };
 
+// Component bảo vệ route theo Role (Chỉ cho phép role cụ thể truy cập)
+const RoleRoute = ({ children, allowedRoles }) => {
+    const { user, loading } = useAuth();
+    if (loading) return <div className="flex items-center justify-center h-screen">Đang tải...</div>;
+    
+    // Nếu user có role nằm trong danh sách cho phép thì render, ngược lại về trang chủ
+    return allowedRoles.includes(user?.role) ? children : <Navigate to="/" />;
+};
+
 function App() {
     return (
         <AuthProvider>
@@ -59,9 +70,14 @@ function App() {
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/ho-khau" element={<HouseholdPage />} />
                         <Route path="/nhan-khau" element={<ResidentListPage />} />
+                        <Route path="/bien-doi-nhan-khau" element={<ResidenceChangePage />} />
                         <Route path="/quan-ly-phi" element={<FeeManagerPage />} />
                         <Route path="/dot-thu" element={<PaymentCollectionPage />} />
-                        <Route path="/nguoi-dung" element={<UserManagementPage />} />
+                        <Route path="/nguoi-dung" element={
+                            <RoleRoute allowedRoles={['admin']}>
+                                <UserManagementPage />
+                            </RoleRoute>
+                        } />
                     </Route>
 
                     {/* Route mặc định: Nếu gõ link sai thì về trang chủ */}

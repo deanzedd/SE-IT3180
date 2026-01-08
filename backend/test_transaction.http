@@ -4,7 +4,7 @@
 
 ### --- TEST 1: GHI NHẬN NỘP TIỀN (CREATE) ---
 # Endpoint: POST /api/transactions
-@transactionId = 6933f1aefcedd4dc2a654576
+@transactionId = 695382e3cd79049125f28536
 POST {{host}}/api/transactions
 Content-Type: application/json
 Authorization: Bearer {{token}}
@@ -20,8 +20,8 @@ Authorization: Bearer {{token}}
 ### --- TEST 2: LẤY CHI TIẾT GIAO DỊCH VỪA TẠO (READ by ID) ---
 # Endpoint: GET /api/transactions/:id
 # LƯU Ý: Thay {{transactionId}} bằng ID từ phản hồi TEST 1
-#GET {{host}}/api/transactions/{{transactionId}}
-#Authorization: Bearer {{token}}
+GET {{host}}/api/transactions/{{transactionId}}
+Authorization: Bearer {{token}}
 
 ### --- TEST 3: SỬA GIAO DỊCH (UPDATE) ---
 # Cập nhật lại số tiền nếu có sai sót trong quá trình nhập liệu
@@ -38,6 +38,6 @@ Authorization: Bearer {{token}}
 ### --- TEST 4: TRUY VẤN GIAO DỊCH THEO ĐỢT THU ---
 # (Chức năng Thống kê/Truy vấn UC007)
 # Endpoint: GET /api/paymentSession/:sessionId/transactions
-@paymentSessionId = 6933eff5fcedd4dc2a6544bb
+@paymentSessionId = 
 GET {{host}}/api/paymentSessions/{{paymentSessionId}}/transactions
 Authorization: Bearer {{token}}

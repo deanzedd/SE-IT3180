@@ -19,11 +19,6 @@ const getFees = async (req, res) => {
 const createFee = async (req, res) => {
     const { name, type, unitPrice, unit, description } = req.body;
 
-    // Validation (Basic check)
-    if (!name || !type || !unitPrice || !unit) {
-        return res.status(400).json({ message: 'Please fill in all required fields: name, type, unitPrice, unit' });
-    }
-
     try {
         // Check if a fee with the same name already exists
         const existingFee = await Fee.findOne({ name });
@@ -51,29 +46,26 @@ const createFee = async (req, res) => {
 // @access    Private (Admin/Manager role typically)
 const editFee = async (req, res) => {
     const { id } = req.params;
-    const { name, type, unitPrice, unit, description } = req.body;
+    // Lấy dữ liệu từ body
+    const updateData = req.body;
 
-    // Optional: Check if the ID is valid ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ message: 'Invalid Fee ID format' });
     }
 
     try {
-        const fee = await Fee.findById(id);
+        // Sử dụng findByIdAndUpdate để ghi đè dữ liệu hiệu quả hơn
+        const updatedFee = await Fee.findByIdAndUpdate(
+            id, 
+            { $set: updateData }, // Sử dụng $set để cập nhật chính xác các trường gửi lên
+            { new: true, runValidators: true }
+        );
 
-        if (fee) {
-            // Update fields only if they are provided in the request body
-            fee.name = name || fee.name;
-            fee.type = type || fee.type;
-            fee.unitPrice = unitPrice !== undefined ? unitPrice : fee.unitPrice;
-            fee.unit = unit || fee.unit;
-            fee.description = description !== undefined ? description : fee.description;
-
-            const updatedFee = await fee.save();
-            res.status(200).json(updatedFee);
-        } else {
-            res.status(404).json({ message: 'Fee not found' });
+        if (!updatedFee) {
+            return res.status(404).json({ message: 'Fee not found' });
         }
+
+        res.status(200).json(updatedFee);
     } catch (error) {
         res.status(400).json({ message: 'Error updating fee', error: error.message });
     }

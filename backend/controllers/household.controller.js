@@ -1,13 +1,27 @@
 const Household = require('../models/household');
-const Resident = require('../models/residents');
+const Resident = require('../models/resident');
 // @desc    Get all households
 // @route   GET /api/households
 //PHIÊN BẢN ĐẦU: GỌI TẤT CẢ CÁC HOUSEHOLD CÙNG VỚI MEMBER
 //DỰ KIẾN: KHI LOAD TRANG KHÔNG CẦN GỌI MEMBER, MÀ SẼ GỌI KHI BẤM NÚT CHI TIẾT
 const getHouseholds = async (req, res) => {
     try {
-        const households = await Household.find().populate('members');
-        res.json(households);
+        // Populate members để lấy thông tin chi tiết nhân khẩu
+        const households = await Household.find().populate('members').sort({ apartmentNumber: 1 });
+        
+        // Map qua từng hộ để tìm chủ hộ và thêm trường ownerName
+        const data = households.map(h => {
+            const householdObj = h.toObject();
+            // Tìm thành viên là chủ hộ
+            const owner = (h.members || []).find(m => m.relationToOwner === 'owner');
+            
+            return {
+                ...householdObj,
+                ownerName: owner ? owner.fullName : 'Chưa có'
+            };
+        });
+
+        res.status(200).json(data);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -16,9 +30,14 @@ const getHouseholds = async (req, res) => {
 // @desc    Create new household
 // @route   POST /api/households
 const createHousehold = async (req, res) => {
-    const { apartmentNumber, area, ownerName, motorbikeNumber, carNumber, status } = req.body;
+    const { apartmentNumber, area, motorbikeNumber, carNumber, status } = req.body;
     try {
-        const household = new Household({ apartmentNumber, area, ownerName, motorbikeNumber, carNumber, status });
+        // Validate required fields
+        if (!apartmentNumber || !area) {
+            return res.status(400).json({ message: "Vui lòng nhập số căn hộ và diện tích" });
+        }
+
+        const household = new Household({ apartmentNumber, area, motorbikeNumber, carNumber, status });
         const createdHousehold = await household.save();
         res.status(201).json(createdHousehold);
     } catch (error) {
