@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Receipt, RotateCcw } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Table from '../../components/common/Table';
@@ -25,6 +25,7 @@ const FeeManagerPage = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalFees, setTotalFees] = useState(0);
+    const prevSearchTerm = useRef(searchTerm);
 
     // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
     const canEdit = ['admin', 'accountant'].includes(user?.role);
@@ -34,9 +35,16 @@ const FeeManagerPage = () => {
     }, [page]);
 
     useEffect(() => {
+        if (prevSearchTerm.current === searchTerm) {
+            return;
+        }
+        prevSearchTerm.current = searchTerm;
         const delayDebounceFn = setTimeout(() => {
-            setPage(1);
-            fetchFees();
+            if (page === 1) {
+                fetchFees();
+            } else {
+                setPage(1);
+            }
         }, 500);
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm]);

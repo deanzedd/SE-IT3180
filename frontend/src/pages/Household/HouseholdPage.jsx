@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import householdApi from '../../api/householdApi';
 import { Plus, Edit, Trash2, User, Home as HomeIcon, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import Modal from '../../components/common/Modal';
@@ -25,6 +25,7 @@ const HouseholdPage = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalHouseholds, setTotalHouseholds] = useState(0);
+    const prevSearchTerm = useRef(searchTerm);
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -35,15 +36,16 @@ const HouseholdPage = () => {
     });
 
     useEffect(() => {
-        if (user?.token) {
-            fetchHouseholds();
+        if (prevSearchTerm.current === searchTerm) {
+            return;
         }
-    }, [user]);
-
-    useEffect(() => {
+        prevSearchTerm.current = searchTerm;
         const delayDebounceFn = setTimeout(() => {
-            setPage(1); // Reset về trang 1 khi search
-            fetchHouseholds(1, searchTerm);
+            if (page === 1) {
+                fetchHouseholds();
+            } else {
+                setPage(1);
+            }
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);

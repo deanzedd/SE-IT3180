@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Search, User, Shield, Eye } from 'lucide-react';
 import SearchBar from '../../components/common/SearchBar';
 import Table from '../../components/common/Table';
@@ -72,6 +72,7 @@ const UserManagementPage = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalUsers, setTotalUsers] = useState(0);
+    const prevSearchTerm = useRef(searchTerm);
 
     // Filter checkboxes
     const [filterVaiTro, setFilterVaiTro] = useState({
@@ -95,9 +96,16 @@ const UserManagementPage = () => {
     }, [page]);
 
     useEffect(() => {
+        if (prevSearchTerm.current === searchTerm) {
+            return;
+        }
+        prevSearchTerm.current = searchTerm;
         const delayDebounceFn = setTimeout(() => {
-            setPage(1);
-            fetchUsers();
+            if (page === 1) {
+                fetchUsers();
+            } else {
+                setPage(1);
+            }
         }, 500);
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm]);
