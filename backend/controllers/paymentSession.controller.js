@@ -42,7 +42,7 @@ const getPaymentSessions = async (req, res) => {
 
         res.status(200).json(sessions);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching payment sessions', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi lấy danh sách đợt thu', error: error.message });
     }
 };
 
@@ -53,7 +53,7 @@ const createPaymentSession = async (req, res) => {
     const { title, description, startDate, endDate, fees } = req.body;
 
     if (!title) {
-        return res.status(400).json({ message: 'Title is required to create a payment session.' });
+        return res.status(400).json({ message: 'Tiêu đề là bắt buộc để tạo đợt thu.' });
     }
 
     try {
@@ -73,7 +73,7 @@ const createPaymentSession = async (req, res) => {
 
         res.status(201).json(createdSession);
     } catch (error) {
-        res.status(400).json({ message: 'Error creating payment session', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi tạo đợt thu', error: error.message });
     }
 };
 
@@ -160,14 +160,14 @@ const editPaymentSession = async (req, res) => {
     const updateData = req.body;
 
     if (!isValidId(id)) {
-        return res.status(400).json({ message: 'Invalid Session ID format' });
+        return res.status(400).json({ message: 'Định dạng ID đợt thu không hợp lệ' });
     }
 
     try {
         // 1. Tìm session cũ để so sánh trước khi update
         const oldSession = await PaymentSession.findById(id);
         if (!oldSession) {
-            return res.status(404).json({ message: 'Payment Session not found' });
+            return res.status(404).json({ message: 'Không tìm thấy đợt thu' });
         }
 
         // 2. Kiểm tra xem có thay đổi những trường quan trọng không
@@ -196,7 +196,7 @@ const editPaymentSession = async (req, res) => {
         res.status(200).json(updatedSession);
     } catch (error) {
         console.error("Lỗi cập nhật phiên thu:", error);
-        res.status(400).json({ message: 'Error updating payment session', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi cập nhật đợt thu', error: error.message });
     }
 };
 
@@ -208,7 +208,7 @@ const deletePaymentSession = async (req, res) => {
     const { id } = req.params;
 
     if (!isValidId(id)) {
-        return res.status(400).json({ message: 'Invalid Session ID format' });
+        return res.status(400).json({ message: 'Định dạng ID đợt thu không hợp lệ' });
     }
 
     try {
@@ -226,12 +226,12 @@ const deletePaymentSession = async (req, res) => {
         const result = await PaymentSession.findByIdAndDelete(id);
 
         if (!result) {
-            return res.status(404).json({ message: 'Payment Session not found' });
+            return res.status(404).json({ message: 'Không tìm thấy đợt thu' });
         }
 
-        res.status(200).json({ message: 'Payment Session successfully deleted' });
+        res.status(200).json({ message: 'Đã xóa đợt thu thành công' });
     } catch (error) {
-        res.status(500).json({ message: 'Error deleting payment session', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi xóa đợt thu', error: error.message });
     }
 };
 
@@ -268,14 +268,14 @@ const getInvoicesBySession = async (req, res) => {
     const { householdId } = req.query;
 
     if (!isValidId(id)) {
-        return res.status(400).json({ message: 'Invalid Session ID format' });
+        return res.status(400).json({ message: 'Định dạng ID đợt thu không hợp lệ' });
     }
 
     try {
         const query = { paymentSession: id };
         if (householdId) {
              if (!isValidId(householdId)) {
-                return res.status(400).json({ message: 'Invalid Household ID format' });
+                return res.status(400).json({ message: 'Định dạng ID hộ khẩu không hợp lệ' });
             }
             query.household = householdId;
         }
@@ -287,7 +287,7 @@ const getInvoicesBySession = async (req, res) => {
 
         res.status(200).json(invoices);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching invoices', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi lấy danh sách hóa đơn', error: error.message });
     }
 };
 
@@ -299,7 +299,7 @@ const updateInvoicesForFee = async (req, res) => {
     const { invoices } = req.body; // Array of { householdId, amount }
 
     if (!isValidId(id) || !isValidId(feeId)) {
-        return res.status(400).json({ message: 'Invalid IDs' });
+        return res.status(400).json({ message: 'ID không hợp lệ' });
     }
 
     try {
@@ -315,9 +315,9 @@ const updateInvoicesForFee = async (req, res) => {
             await Invoice.bulkWrite(operations);
         }
 
-        res.status(200).json({ message: 'Invoices updated successfully' });
+        res.status(200).json({ message: 'Cập nhật hóa đơn thành công' });
     } catch (error) {
-        res.status(500).json({ message: 'Error updating invoices', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi cập nhật hóa đơn', error: error.message });
     }
 };
 

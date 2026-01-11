@@ -10,9 +10,12 @@ import householdApi from '../../api/householdApi';
 import ResidenceChangeModal from './ResidenceChangeModal';
 import { exportToExcel } from '../../utils/excelHandle';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const ResidenceChangePage = () => {
     const { user } = useAuth();
+    const toast = useToast();
     const navigate = useNavigate();
     const [changes, setChanges] = useState([]);
     const [residents, setResidents] = useState([]);
@@ -22,6 +25,7 @@ const ResidenceChangePage = () => {
     const [activeTab, setActiveTab] = useState('temporary_residence');
     const [editingChange, setEditingChange] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -58,8 +62,9 @@ const ResidenceChangePage = () => {
             await fetchData();
             setIsModalOpen(false);
             setEditingChange(null);
+            toast.success(editingChange ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
-            alert(error.response?.data?.message || "Lỗi khi lưu");
+            toast.error(error.response?.data?.message || "Lỗi khi lưu");
         }
     };
 
@@ -83,14 +88,20 @@ const ResidenceChangePage = () => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa bản ghi này?')) {
-            try {
-                await residenceChangeApi.remove(id);
-                fetchData();
-            } catch (error) {
-                alert("Xóa thất bại");
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa biến đổi nhân khẩu',
+            message: 'Bạn có chắc chắn muốn xóa bản ghi này?',
+            onConfirm: async () => {
+                try {
+                    await residenceChangeApi.remove(id);
+                    fetchData();
+                    toast.success('Đã xóa bản ghi');
+                } catch (error) {
+                    toast.error("Xóa thất bại");
+                }
             }
-        }
+        });
     };
 
     const filteredChanges = changes.filter(item => {
@@ -220,6 +231,11 @@ const ResidenceChangePage = () => {
                 households={households}
                 onSubmit={handleSubmit}
                 initialData={editingChange}
+            />
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
             />
         </div>
     );

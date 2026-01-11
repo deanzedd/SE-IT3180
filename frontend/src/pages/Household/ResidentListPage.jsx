@@ -10,6 +10,8 @@ import residentsApi from '../../api/residentsApi';
 import householdApi from '../../api/householdApi';
 import { useNavigate } from 'react-router-dom';
 import { exportToExcel } from '../../utils/excelHandle';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 // const initialResidents = [
 //     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
@@ -20,6 +22,7 @@ import { exportToExcel } from '../../utils/excelHandle';
 
 const ResidentListPage = () => {
     const { user } = useAuth();
+    const toast = useToast();
     const navigate = useNavigate();
     const [residents, setResidents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -31,6 +34,7 @@ const ResidentListPage = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showDeleted, setShowDeleted] = useState(false);
     const [deletedResidents, setDeletedResidents] = useState([]);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -225,7 +229,7 @@ const ResidentListPage = () => {
         
         // Validate that household is selected
         if (!formData.household) {
-            alert('Vui lòng chọn hộ khẩu');
+            toast.warning('Vui lòng chọn hộ khẩu');
             return;
         }
         
@@ -241,33 +245,47 @@ const ResidentListPage = () => {
             
             setIsModalOpen(false);
             setEditingResident(null); // Reset trạng thái chỉnh sửa
+            toast.success(editingResident ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
             console.error("Lỗi khi lưu:", error);
-            alert(error.response?.data?.message || "Có lỗi xảy ra khi lưu dữ liệu");
+            toast.error(error.response?.data?.message || "Có lỗi xảy ra khi lưu dữ liệu");
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa nhân khẩu này?')) {
-            try {
-                await residentsApi.remove(id);
-                fetchData();
-            } catch (error) {
-                alert("Xóa thất bại ");
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa nhân khẩu',
+            message: 'Bạn có chắc chắn muốn xóa nhân khẩu này?',
+            onConfirm: async () => {
+                try {
+                    await residentsApi.remove(id);
+                    fetchData();
+                    toast.success('Đã xóa nhân khẩu');
+                } catch (error) {
+                    toast.error(error.response?.data?.message || "Xóa thất bại");
+                }
             }
-        }
+        });
     };
 
     const handleRestore = async (id) => {
-        if (window.confirm('Khôi phục nhân khẩu này?')) {
-            try {
-                await residentsApi.update(id, { isDeleted: false });
-                fetchDeletedResidents();
-                fetchData();
-            } catch (error) {
-                alert(error.response?.data?.message || 'Lỗi khi khôi phục');
+        setConfirmModal({
+            isOpen: true,
+            title: 'Khôi phục nhân khẩu',
+            message: 'Bạn có muốn khôi phục nhân khẩu này?',
+            type: 'info',
+            onConfirm: async () => {
+                try {
+                    await residentsApi.update(id, { isDeleted: false });
+                    fetchDeletedResidents();
+                    fetchData();
+                    toast.success('Khôi phục thành công');
+                } catch (error) {
+                    toast.error(error.response?.data?.message || 'Lỗi khi khôi phục');
+                }
             }
-        }
+        });
     };
 
     return (
@@ -473,6 +491,11 @@ const ResidentListPage = () => {
                     </form>
                 </div>
             </Modal>
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            />
         </div>
     );
 };

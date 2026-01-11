@@ -57,7 +57,7 @@ const deleteHousehold = async (req, res) => {
         // 1. Kiểm tra hộ khẩu tồn tại
         const household = await Household.findById(id);
         if (!household) {
-            return res.status(404).json({ message: "Household not found" });
+            return res.status(404).json({ message: "Không tìm thấy hộ khẩu" });
         }
 
         // 2. Kiểm tra xem có nhân khẩu nào đang thuộc hộ này không
@@ -70,7 +70,7 @@ const deleteHousehold = async (req, res) => {
         await Household.findByIdAndUpdate(id, { isDeleted: true });
 
         res.status(200).json({ 
-            message: "Household deleted successfully",
+            message: "Đã xóa hộ khẩu thành công",
             deletedHousehold: household 
         });
     } catch (error) {

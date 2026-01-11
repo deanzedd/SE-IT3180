@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 
 // Import các trang (Đảm bảo đường dẫn file đúng với thư mục bạn đã tạo)
 import LoginPage from './pages/Auth/LoginPage';
@@ -55,35 +56,37 @@ const RoleRoute = ({ children, allowedRoles }) => {
 function App() {
     return (
         <AuthProvider>
-            <Router>
-                <Routes>
-                    {/* 1. ROUTE CÔNG KHAI */}
-                    <Route path="/login" element={<LoginPage />} />
+            <ToastProvider>
+                <Router>
+                    <Routes>
+                        {/* 1. ROUTE CÔNG KHAI */}
+                        <Route path="/login" element={<LoginPage />} />
 
-                    {/* 2. ROUTE CẦN BẢO VỆ (Dùng Layout Route) */}
-                    <Route element={
-                        <PrivateRoute>
-                            <DashboardLayout />
-                        </PrivateRoute>
-                    }>
-                        {/* Định nghĩa các trang con */}
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/ho-khau" element={<HouseholdPage />} />
-                        <Route path="/nhan-khau" element={<ResidentListPage />} />
-                        <Route path="/bien-doi-nhan-khau" element={<ResidenceChangePage />} />
-                        <Route path="/quan-ly-phi" element={<FeeManagerPage />} />
-                        <Route path="/dot-thu" element={<PaymentCollectionPage />} />
-                        <Route path="/nguoi-dung" element={
-                            <RoleRoute allowedRoles={['admin']}>
-                                <UserManagementPage />
-                            </RoleRoute>
-                        } />
-                    </Route>
+                        {/* 2. ROUTE CẦN BẢO VỆ (Dùng Layout Route) */}
+                        <Route element={
+                            <PrivateRoute>
+                                <DashboardLayout />
+                            </PrivateRoute>
+                        }>
+                            {/* Định nghĩa các trang con */}
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/ho-khau" element={<HouseholdPage />} />
+                            <Route path="/nhan-khau" element={<ResidentListPage />} />
+                            <Route path="/bien-doi-nhan-khau" element={<ResidenceChangePage />} />
+                            <Route path="/quan-ly-phi" element={<FeeManagerPage />} />
+                            <Route path="/dot-thu" element={<PaymentCollectionPage />} />
+                            <Route path="/nguoi-dung" element={
+                                <RoleRoute allowedRoles={['admin']}>
+                                    <UserManagementPage />
+                                </RoleRoute>
+                            } />
+                        </Route>
 
-                    {/* Route mặc định: Nếu gõ link sai thì về trang chủ */}
-                    <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-            </Router>
+                        {/* Route mặc định: Nếu gõ link sai thì về trang chủ */}
+                        <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                </Router>
+            </ToastProvider>
         </AuthProvider>
     );
 }

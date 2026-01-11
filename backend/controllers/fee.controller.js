@@ -12,7 +12,7 @@ const getFees = async (req, res) => {
         const fees = await Fee.find(filter).sort({ createdAt: -1 });
         res.status(200).json(fees);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching fees', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi lấy danh sách khoản thu', error: error.message });
     }
 };
 
@@ -26,7 +26,7 @@ const createFee = async (req, res) => {
         // Check if a fee with the same name already exists
         const existingFee = await Fee.findOne({ name, isDeleted: { $ne: true } });
         if (existingFee) {
-            return res.status(400).json({ message: 'A fee with this name already exists.' });
+            return res.status(400).json({ message: 'Khoản thu với tên này đã tồn tại.' });
         }
 
         const fee = new Fee({
@@ -40,7 +40,7 @@ const createFee = async (req, res) => {
         const createdFee = await fee.save();
         res.status(201).json(createdFee);
     } catch (error) {
-        res.status(400).json({ message: 'Error creating fee', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi tạo khoản thu', error: error.message });
     }
 };
 
@@ -53,7 +53,7 @@ const editFee = async (req, res) => {
     const updateData = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid Fee ID format' });
+        return res.status(400).json({ message: 'Định dạng ID khoản thu không hợp lệ' });
     }
 
     try {
@@ -65,12 +65,12 @@ const editFee = async (req, res) => {
         );
 
         if (!updatedFee) {
-            return res.status(404).json({ message: 'Fee not found' });
+            return res.status(404).json({ message: 'Không tìm thấy khoản thu' });
         }
 
         res.status(200).json(updatedFee);
     } catch (error) {
-        res.status(400).json({ message: 'Error updating fee', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi cập nhật khoản thu', error: error.message });
     }
 };
 
@@ -81,7 +81,7 @@ const deleteFee = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid Fee ID format' });
+        return res.status(400).json({ message: 'Định dạng ID khoản thu không hợp lệ' });
     }
 
     try {
@@ -97,12 +97,12 @@ const deleteFee = async (req, res) => {
             }
 
             await Fee.findByIdAndUpdate(id, { isDeleted: true });
-            res.status(200).json({ message: 'Fee successfully removed' });
+            res.status(200).json({ message: 'Đã xóa khoản thu thành công' });
         } else {
-            res.status(404).json({ message: 'Fee not found' });
+            res.status(404).json({ message: 'Không tìm thấy khoản thu' });
         }
     } catch (error) {
-        res.status(500).json({ message: 'Error deleting fee', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi xóa khoản thu', error: error.message });
     }
 };
 

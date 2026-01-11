@@ -5,8 +5,11 @@ import Table from '../../components/common/Table';
 import {Button} from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import userApi from '../../api/userApi';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const UserManagementPage = () => {
+    const toast = useToast();
     const [nguoiDungs, setNguoiDungs] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -64,6 +67,7 @@ const UserManagementPage = () => {
     const [editingNguoiDung, setEditingNguoiDung] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewingNguoiDung, setViewingNguoiDung] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Filter checkboxes
     const [filterVaiTro, setFilterVaiTro] = useState({
@@ -131,11 +135,16 @@ const UserManagementPage = () => {
     };
 
     const handleDelete = (id) => {
-        if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
-            userApi.remove(id)
-                .then(() => fetchUsers())
-                .catch(error => alert('Lỗi khi xóa: ' + (error.response?.data?.message || error.message)));
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa người dùng',
+            message: 'Bạn có chắc chắn muốn xóa người dùng này?',
+            onConfirm: () => {
+                userApi.remove(id)
+                    .then(() => { fetchUsers(); toast.success('Đã xóa người dùng'); })
+                    .catch(error => toast.error(error.response?.data?.message || 'Lỗi khi xóa người dùng'));
+            }
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -149,8 +158,9 @@ const UserManagementPage = () => {
             }
             fetchUsers();
             setShowModal(false);
+            toast.success(editingNguoiDung ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
-            alert('Lỗi: ' + (error.response?.data?.message || error.message));
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
@@ -525,6 +535,11 @@ const UserManagementPage = () => {
                     </div>
                 </Modal>
             )}
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            />
         </div>
     );
 };

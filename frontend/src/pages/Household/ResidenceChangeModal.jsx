@@ -4,8 +4,10 @@ import { Button } from '../../components/common/Button';
 import { Search } from 'lucide-react';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useToast } from '../../context/ToastContext';
 
 const ResidenceChangeModal = ({ isOpen, onClose, residents, households, onSubmit, initialData }) => {
+    const toast = useToast();
     const [formData, setFormData] = useState({
         residentId: '',
         changeType: 'temporary_residence', // temporary_residence | temporary_absence
@@ -105,7 +107,7 @@ const ResidenceChangeModal = ({ isOpen, onClose, residents, households, onSubmit
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!formData.residentId) {
-            alert("Vui lòng chọn nhân khẩu");
+            toast.warning("Vui lòng chọn nhân khẩu");
             return;
         }
         onSubmit(formData);

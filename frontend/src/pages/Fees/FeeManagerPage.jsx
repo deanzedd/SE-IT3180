@@ -7,9 +7,12 @@ import SearchBar from '../../components/common/SearchBar';
 import AddFeeModal from './AddFeeModal';
 import feeApi from '../../api/feeApi';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const FeeManagerPage = () => {
     const { user } = useAuth();
+    const toast = useToast();
     const [fees, setFees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +20,7 @@ const FeeManagerPage = () => {
     const [editingFee, setEditingFee] = useState(null);
     const [showDeleted, setShowDeleted] = useState(false);
     const [deletedFees, setDeletedFees] = useState([]);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
     const canEdit = ['admin', 'accountant'].includes(user?.role);
@@ -143,29 +147,42 @@ const FeeManagerPage = () => {
             }
             fetchFees();
             setIsModalOpen(false);
+            toast.success(editingFee ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
-            alert('Lỗi: ' + (error.response?.data?.message || error.message));
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
     const handleDelete = (id) => {
-        if (window.confirm('Xóa khoản thu này?')) {
-            feeApi.remove(id)
-                .then(() => fetchFees())
-                .catch(error => alert('Lỗi khi xóa: ' + (error.response?.data?.message || error.message)));
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa khoản thu',
+            message: 'Bạn có chắc chắn muốn xóa khoản thu này?',
+            onConfirm: () => {
+                feeApi.remove(id)
+                    .then(() => { fetchFees(); toast.success('Đã xóa khoản thu'); })
+                    .catch(error => toast.error(error.response?.data?.message || 'Lỗi khi xóa khoản thu'));
+            }
+        });
     };
 
     const handleRestore = async (id) => {
-        if (window.confirm('Khôi phục khoản thu này?')) {
-            try {
-                await feeApi.update(id, { isDeleted: false });
-                fetchDeletedFees();
-                fetchFees();
-            } catch (error) {
-                alert('Lỗi khi khôi phục: ' + (error.response?.data?.message || error.message));
+        setConfirmModal({
+            isOpen: true,
+            title: 'Khôi phục khoản thu',
+            message: 'Bạn có muốn khôi phục khoản thu này?',
+            type: 'info',
+            onConfirm: async () => {
+                try {
+                    await feeApi.update(id, { isDeleted: false });
+                    fetchDeletedFees();
+                    fetchFees();
+                    toast.success('Khôi phục thành công');
+                } catch (error) {
+                    toast.error(error.response?.data?.message || 'Lỗi khi khôi phục khoản thu');
+                }
             }
-        }
+        });
     };
 
     const filteredFees = fees.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -255,6 +272,11 @@ const FeeManagerPage = () => {
                 onClose={() => setIsModalOpen(false)} 
                 onSubmit={handleSubmit}
                 initialData={editingFee}
+            />
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
             />
         </div>
     );

@@ -185,7 +185,7 @@ const seedSessionsAndDetails = async (fees, households) => {
 
     // Tạo 1 đợt thu mẫu
     const sessionData = {
-        title: `Thu phí tháng 1/2026}`,
+        title: `Thu phí tháng 1/2026`,
         description: 'Thu phí quản lý, gửi xe và điện nước định kỳ',
         startDate: new Date('2026-01-10'),
         endDate: new Date('2026-01-31'),

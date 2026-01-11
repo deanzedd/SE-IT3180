@@ -10,7 +10,7 @@ const getUsers = async (req, res) => {
         const users = await User.find().select('-password'); // Exclude password from response
         res.status(200).json(users);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching users', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi lấy danh sách người dùng', error: error.message });
     }
 };
 
@@ -22,19 +22,19 @@ const getUserById = async (req, res) => {
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid User ID format' });
+        return res.status(400).json({ message: 'Định dạng ID người dùng không hợp lệ' });
     }
 
     try {
         const user = await User.findById(id).select('-password');
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'Không tìm thấy người dùng' });
         }
 
         res.status(200).json(user);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching user', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi lấy thông tin người dùng', error: error.message });
     }
 };
 
@@ -48,14 +48,14 @@ const createUser = async (req, res) => {
     // Validation
     if (!username || !password || !fullName || !role) {
         return res.status(400).json({
-            message: 'Please fill in all required fields: username, password, fullName, role'
+            message: 'Vui lòng điền đầy đủ các trường bắt buộc: tên đăng nhập, mật khẩu, họ tên, vai trò'
         });
     }
 
     // Validate role
     if (!['admin', 'manager', 'accountant'].includes(role)) {
         return res.status(400).json({
-            message: 'Invalid role. Must be either "admin", "manager", or "accountant"'
+            message: 'Vai trò không hợp lệ. Phải là "admin", "manager", hoặc "accountant"'
         });
     }
 
@@ -63,7 +63,7 @@ const createUser = async (req, res) => {
         // Check if username already exists
         const existingUser = await User.findOne({ username });
         if (existingUser) {
-            return res.status(400).json({ message: `Username "${username}" already exists` });
+            return res.status(400).json({ message: `Tên đăng nhập "${username}" đã tồn tại` });
         }
 
         // Create new user
@@ -94,7 +94,7 @@ const createUser = async (req, res) => {
 
         res.status(201).json(userResponse);
     } catch (error) {
-        res.status(400).json({ message: 'Error creating user', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi tạo người dùng', error: error.message });
     }
 };
 
@@ -108,14 +108,14 @@ const updateUser = async (req, res) => {
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid User ID format' });
+        return res.status(400).json({ message: 'Định dạng ID người dùng không hợp lệ' });
     }
 
     try {
         const user = await User.findById(id);
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'Không tìm thấy người dùng' });
         }
 
         // Update fields if provided
@@ -127,7 +127,7 @@ const updateUser = async (req, res) => {
             // Validate role
             if (!['admin', 'manager', 'accountant'].includes(role)) {
                 return res.status(400).json({
-                    message: 'Invalid role. Must be either "admin", "manager", or "accountant"'
+                    message: 'Vai trò không hợp lệ. Phải là "admin", "manager", hoặc "accountant"'
                 });
             }
             user.role = role;
@@ -151,7 +151,7 @@ const updateUser = async (req, res) => {
 
         res.status(200).json(userResponse);
     } catch (error) {
-        res.status(400).json({ message: 'Error updating user', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi cập nhật người dùng', error: error.message });
     }
 };
 
@@ -164,14 +164,14 @@ const deleteUser = async (req, res) => {
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid User ID format' });
+        return res.status(400).json({ message: 'Định dạng ID người dùng không hợp lệ' });
     }
 
     try {
         const user = await User.findById(id);
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'Không tìm thấy người dùng' });
         }
 
         // Prevent deletion of the last admin user (optional check)
@@ -179,7 +179,7 @@ const deleteUser = async (req, res) => {
             const adminCount = await User.countDocuments({ role: 'admin' });
             if (adminCount === 1) {
                 return res.status(400).json({
-                    message: 'Cannot delete the last admin user. Must have at least one admin.'
+                    message: 'Không thể xóa quản trị viên cuối cùng. Phải có ít nhất một quản trị viên.'
                 });
             }
         }
@@ -187,7 +187,7 @@ const deleteUser = async (req, res) => {
         await User.findByIdAndDelete(id);
 
         res.status(200).json({
-            message: 'User deleted successfully',
+            message: 'Đã xóa người dùng thành công',
             deletedUser: {
                 _id: user._id,
                 username: user.username,
@@ -199,7 +199,7 @@ const deleteUser = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(400).json({ message: 'Error deleting user', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi xóa người dùng', error: error.message });
     }
 };
 

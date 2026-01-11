@@ -7,9 +7,12 @@ import SearchBar from '../../components/common/SearchBar.jsx';
 import Table from '../../components/common/Table.jsx';
 import { useAuth } from '../../context/AuthContext'; // Lấy user từ context
 import { exportToExcel } from '../../utils/excelHandle';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const HouseholdPage = () => {
     const { user } = useAuth(); // Lấy thông tin user đã đăng nhập
+    const toast = useToast();
     const [households, setHouseholds] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,6 +20,7 @@ const HouseholdPage = () => {
     const [loading, setLoading] = useState(true);
     const [showDeleted, setShowDeleted] = useState(false);
     const [deletedHouseholds, setDeletedHouseholds] = useState([]);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -39,7 +43,7 @@ const HouseholdPage = () => {
             setHouseholds(response.data);
         } catch (error) {
             console.error('Lỗi tải dữ liệu:', error);
-            alert(error.response?.data?.message || 'Không thể tải dữ liệu danh sách hộ khẩu.');
+            toast.error(error.response?.data?.message || 'Không thể tải dữ liệu danh sách hộ khẩu.');
         } finally {
             setLoading(false);
         }
@@ -180,32 +184,46 @@ const HouseholdPage = () => {
             }
             fetchHouseholds();
             setIsModalOpen(false);
+            toast.success(editingHousehold ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
-            alert(error.response?.data?.message || "Lỗi khi lưu dữ liệu");
+            toast.error(error.response?.data?.message || "Có lỗi xảy ra khi lưu dữ liệu");
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Xác nhận xóa hộ khẩu?')) {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa hộ khẩu',
+            message: 'Bạn có chắc chắn muốn xóa hộ khẩu này?',
+            onConfirm: async () => {
                 try {
                     await householdApi.remove(id);
                     fetchHouseholds();
+                    toast.success('Đã xóa hộ khẩu');
                 } catch (error) {
-                    alert(error.response?.data?.message || 'Lỗi khi xóa hộ khẩu');
+                    toast.error(error.response?.data?.message || 'Lỗi khi xóa hộ khẩu');
                 }
-        }
+            }
+        });
     };
 
     const handleRestore = async (id) => {
-        if (window.confirm('Khôi phục căn hộ này?')) {
-            try {
-                await householdApi.update(id, { isDeleted: false });
-                fetchDeletedHouseholds();
-                fetchHouseholds();
-            } catch (error) {
-                alert(error.response?.data?.message || 'Lỗi khi khôi phục');
+        setConfirmModal({
+            isOpen: true,
+            title: 'Khôi phục hộ khẩu',
+            message: 'Bạn có muốn khôi phục hộ khẩu này?',
+            type: 'info',
+            onConfirm: async () => {
+                try {
+                    await householdApi.update(id, { isDeleted: false });
+                    fetchDeletedHouseholds();
+                    fetchHouseholds();
+                    toast.success('Khôi phục thành công');
+                } catch (error) {
+                    toast.error(error.response?.data?.message || 'Lỗi khi khôi phục');
+                }
             }
-        }
+        });
     };
 
     if (loading) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
@@ -299,6 +317,11 @@ const HouseholdPage = () => {
                     </form>
                 </div>
             </Modal>
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            />
         </div>
     );
 };
