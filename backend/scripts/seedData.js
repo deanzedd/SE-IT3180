@@ -63,7 +63,8 @@ const seedUsers = async () => {
     const users = [
         { username: 'admin', password: 'Admin123!', fullName: 'Quản Trị Viên', role: 'admin' },
         { username: 'manager', password: 'Manager123!', fullName: 'Cán Bộ Quản Lý', role: 'manager' },
-        { username: 'accountant', password: 'Accountant123!', fullName: 'Kế Toán Viên', role: 'accountant' }
+        { username: 'accountant', password: 'Accountant123!', fullName: 'Kế Toán Viên', role: 'accountant' },
+        { username: 'accountant02', password: 'Accountant123!', fullName: 'Kế Toán Đi Tù', role: 'accountant', status: 'Tạm khóa' }
     ];
 
     for (const u of users) {
@@ -122,7 +123,9 @@ const seedHouseholdsAndResidents = async () => {
         {
             apt: '201', area: 65, bikes: 1, cars: 0,
             residents: [
-                { name: 'Hoàng Thị F', idCard: '001088000006', relation: 'owner', gender: 'female', dob: '1990-03-08' }
+                { name: 'Hoàng Thị F', idCard: '001088000006', relation: 'owner', gender: 'female', dob: '1990-03-08' },
+                { name: 'Nguyễn Văn G', idCard: '001088000007', relation: 'child', gender: 'male', dob: '2005-08-30' },
+                { name: 'Trần Văn H', idCard: '001088000008', relation: 'renter', gender: 'male', dob: '2005-11-09' }
             ]
         },
         {
@@ -182,10 +185,10 @@ const seedSessionsAndDetails = async (fees, households) => {
 
     // Tạo 1 đợt thu mẫu
     const sessionData = {
-        title: `Thu phí tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`,
+        title: `Thu phí tháng 1/2026}`,
         description: 'Thu phí quản lý, gửi xe và điện nước định kỳ',
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+        startDate: new Date('2026-01-10'),
+        endDate: new Date('2026-01-31'),
         createdBy: admin?._id,
         fees: fees.map(f => ({
             fee: f._id,
@@ -321,6 +324,119 @@ const seedSessionsAndDetails = async (fees, households) => {
             console.log(`✓ Created partial transaction for Household ${partialPayer.household}`);
         }
     }
+
+    // --- TẠO ĐỢT THU 2: Thu phí tháng 12/2025 (Đã đóng đủ) ---
+    const sessionData2 = {
+        title: 'Thu phí tháng 12/2025',
+        description: 'Thu phí cuối năm, tất cả hộ dân đã hoàn thành nghĩa vụ',
+        startDate: new Date('2025-12-10'),
+        endDate: new Date('2025-12-31'),
+        createdBy: admin?._id,
+        fees: fees.map(f => ({
+            fee: f._id,
+            unitPrice: f.unitPrice
+        }))
+    };
+
+    const session2 = await PaymentSession.create(sessionData2);
+    
+    for (const hh of households) {
+        const items = session2.fees.map(sessionFee => {
+            const feeDef = fees.find(f => f._id.toString() === sessionFee.fee.toString());
+            let quantity = 0;
+
+            if (feeDef.type === 'mandatory_automatic') {
+                switch (feeDef.unit) {
+                    case 'area': quantity = hh.area; break;
+                    case 'bike': quantity = hh.motorbikeNumber; break;
+                    case 'car': quantity = hh.carNumber; break;
+                    default: quantity = 1;
+                }
+            } else if (feeDef.type === 'mandatory_manual' && hh.status === 'active') {
+                if (feeDef.unit === 'electricity') quantity = Math.floor(Math.random() * 200) + 50;
+                if (feeDef.unit === 'm^3') quantity = Math.floor(Math.random() * 20) + 5;
+            }
+
+            const totalAmount = quantity * (sessionFee.unitPrice || feeDef.unitPrice);
+
+            return {
+                feeInSessionId: sessionFee._id,
+                feeRef: feeDef._id,
+                feeType: feeDef.type,
+                feeName: feeDef.name,
+                unit: feeDef.unit,
+                unitPrice: sessionFee.unitPrice || feeDef.unitPrice,
+                quantity: quantity,
+                totalAmount: totalAmount,
+                paidAmount: totalAmount, // Full paid
+                isPaid: true
+            };
+        });
+
+        const totalBill = items.reduce((sum, i) => sum + i.totalAmount, 0);
+
+        await HouseholdPaymentDetail.create({
+            paymentSession: session2._id,
+            household: hh._id,
+            items: items,
+            totalBill: totalBill,
+            totalPaidAmount: totalBill,
+            status: 'paid'
+        });
+
+        if (totalBill > 0) {
+            await Transaction.create({
+                household: hh._id,
+                paymentSession: session2._id,
+                amount: totalBill,
+                payerName: 'Chủ hộ (Auto)',
+                method: 'bank',
+                note: 'Thanh toán đủ (Seed)',
+                status: 'checked',
+                createdBy: admin?._id
+            });
+            session2.totalPaidMandatory += totalBill;
+        }
+    }
+    await session2.save();
+    console.log(`✓ Created Payment Session: "${session2.title}" (All Paid)`);
+};
+
+// --- 5. SEED RESIDENCE CHANGES ---
+const seedResidenceChanges = async () => {
+    console.log('📝 Seeding Residence Changes...');
+    
+    // 1. Tạm vắng cho Nguyễn Văn G
+    const residentG = await Resident.findOne({ fullName: 'Nguyễn Văn G' });
+    if (residentG) {
+        await ResidenceChange.create({
+            resident: residentG._id,
+            changeType: 'temporary_absence',
+            startDate: new Date('2025-01-15'),
+            endDate: new Date('2025-07-15'),
+            destination: 'KTX Đại học Quốc Gia',
+            note: 'Đi học đại học'
+        });
+        residentG.status = 'temporary_absence';
+        await residentG.save();
+        console.log(`✓ Created Temporary Absence for ${residentG.fullName}`);
+    }
+
+    // 2. Tạm trú cho Trần Văn H
+    const residentH = await Resident.findOne({ fullName: 'Trần Văn H' });
+    if (residentH) {
+        await ResidenceChange.create({
+            resident: residentH._id,
+            changeType: 'temporary_residence',
+            startDate: new Date('2025-02-01'),
+            endDate: new Date('2026-02-01'),
+            household: residentH.household,
+            note: 'Khách thuê nhà dài hạn'
+        });
+        residentH.status = 'temporary_residence';
+        await residentH.save();
+        console.log(`✓ Created Temporary Residence for ${residentH.fullName}`);
+    }
 };
 
 // --- MAIN EXECUTION ---
@@ -360,6 +476,11 @@ const runSeed = async () => {
         } else {
             console.log('⚠ Skipping Sessions: Need Fees and Households data first.');
         }
+    }
+
+    // 5. Residence Changes
+    if (seedAll || args.includes('--changes')) {
+        await seedResidenceChanges();
     }
 
     console.log('\n🎉 Seeding Completed Successfully!');
