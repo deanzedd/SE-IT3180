@@ -42,8 +42,11 @@ const ResidenceChangePage = () => {
                 householdApi.getAll({ limit: 1000 })  // Lấy tất cả cho modal
             ]);
             setChanges(resChanges.data);
-            setResidents(resResidents.data);
-            setHouseholds(resHouseholds.data);
+            
+            const residentsData = Array.isArray(resResidents.data) ? resResidents.data : resResidents.data?.data;
+            setResidents(residentsData || []);
+            const householdsData = Array.isArray(resHouseholds.data) ? resHouseholds.data : resHouseholds.data?.data;
+            setHouseholds(householdsData || []);
         } catch (error) {
             console.error("Lỗi tải dữ liệu:", error);
         } finally {
