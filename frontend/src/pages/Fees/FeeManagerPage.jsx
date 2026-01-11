@@ -104,6 +104,8 @@ const FeeManagerPage = () => {
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     item.type === 'voluntary' 
                         ? 'bg-green-100 text-green-700' 
+                        : item.type === 'mandatory_manual'
+                        ? 'bg-orange-100 text-orange-700'
                         : 'bg-red-100 text-red-700'
                 }`}>
                     {item.type === 'mandatory_automatic' && 'Bắt buộc (Tự động)'}
@@ -216,10 +218,10 @@ const FeeManagerPage = () => {
             'person': 'Số người',
             'household': 'Hộ gia đình',
             'fixed': 'Cố định',
-            'water': 'Mét khối (m³)',
+            'm³': 'Mét khối (m³)',
             'car': 'Ô tô',
             'bike': 'Xe máy',
-            'electricity': 'kWh',
+            'kWh': 'kWh',
             'default': 'Nhập thẳng số tiền',
         };
         return unitMap[unit] || unit;

@@ -84,8 +84,8 @@ const seedFees = async () => {
         { name: 'Phí quản lý chung cư', type: 'mandatory_automatic', unit: 'area', unitPrice: 7000, description: '7k/m2' },
         { name: 'Phí gửi xe máy', type: 'mandatory_automatic', unit: 'bike', unitPrice: 70000, description: '70k/xe' },
         { name: 'Phí gửi ô tô', type: 'mandatory_automatic', unit: 'car', unitPrice: 1200000, description: '1.2tr/xe' },
-        { name: 'Tiền điện', type: 'mandatory_manual', unit: 'electricity', unitPrice: 3500, description: 'Theo số công tơ' },
-        { name: 'Tiền nước', type: 'mandatory_manual', unit: 'm^3', unitPrice: 15000, description: 'Theo khối' },
+        { name: 'Tiền điện', type: 'mandatory_manual', unit: 'kWh', unitPrice: 3500, description: 'Theo số công tơ' },
+        { name: 'Tiền nước', type: 'mandatory_manual', unit: 'm³', unitPrice: 15000, description: 'Theo khối' },
         { name: 'Quỹ Nuôi em', type: 'voluntary', unit: 'default', unitPrice: 0, description: 'Tự nguyện' }
     ];
 
