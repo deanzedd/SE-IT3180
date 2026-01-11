@@ -14,13 +14,6 @@ import { useToast } from '../../context/ToastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Pagination from '../../components/common/Pagination';
 
-// const initialResidents = [
-//     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
-//     { id: 2, name: 'Nguyễn Thị B', idCard: '001234567891', birthDate: '20/08/1985', gender: 'Nữ', phone: '0901234568', apartment: 'A101', relationship: 'Vợ/Chồng', moveInDate: '01/01/2020' },
-//     { id: 3, name: 'Nguyễn Văn C', idCard: '001234567892', birthDate: '10/03/2010', gender: 'Nam', phone: '', apartment: 'A101', relationship: 'Con', moveInDate: '01/01/2020' },
-//     { id: 4, name: 'Trần Thị D', idCard: '001234567893', birthDate: '25/11/1978', gender: 'Nữ', phone: '0901234569', apartment: 'A202', relationship: 'Chủ hộ', moveInDate: '15/06/2021' },
-// ];
-
 const ResidentListPage = () => {
     const { user } = useAuth();
     const toast = useToast();
@@ -54,7 +47,8 @@ const ResidentListPage = () => {
         gender: 'male',
         phone: '',
         household: '', // Đây là ID của hộ khẩu
-        relationToOwner: 'owner' // Default value - must be one of the enum values
+        relationToOwner: 'owner', // Default value - must be one of the enum values
+        status: 'permanent_residence'
     });
 
     const fetchData = async () => {
@@ -231,11 +225,12 @@ const ResidentListPage = () => {
                 gender: resident.gender,
                 phone: resident.phone || '',
                 household: resident.household?._id || '',
-                relationToOwner: resident.relationToOwner
+                relationToOwner: resident.relationToOwner,
+                status: resident.status || 'permanent_residence'
             });
         } else {
             setEditingResident(null);
-            setFormData({ fullName: '', idNumber: '', dob: '', gender: 'male', phone: '', household: '', relationToOwner: 'owner' });
+            setFormData({ fullName: '', idNumber: '', dob: '', gender: 'male', phone: '', household: '', relationToOwner: 'owner', status: 'permanent_residence' });
         }
         setIsModalOpen(true);
     };
@@ -482,7 +477,14 @@ const ResidentListPage = () => {
                                     <option value="other">Khác</option>
                                 </select>
                             </div>
-                            {/* <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày vào</label><input value={formData.moveInDate} onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div> */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái cư trú</label>
+                                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="permanent_residence">Thường trú</option>
+                                    <option value="temporary_residence">Tạm trú</option>
+                                    <option value="temporary_absence">Tạm vắng</option>
+                                </select>
+                            </div>
                         </div>
 
                         {/* <div className="flex gap-3 justify-end pt-4 border-t mt-6">
