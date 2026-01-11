@@ -1,4 +1,5 @@
 const Fee = require('../models/fee');
+const PaymentSession = require('../models/paymentSession');
 const mongoose = require('mongoose');
 
 // @desc      Get all fees
@@ -6,7 +7,9 @@ const mongoose = require('mongoose');
 // @access    Private
 const getFees = async (req, res) => {
     try {
-        const fees = await Fee.find({});
+        const isDeleted = req.query.isDeleted === 'true' || req.query.isDeleted === true;
+        const filter = isDeleted ? { isDeleted: true } : { isDeleted: { $ne: true } };
+        const fees = await Fee.find(filter).sort({ createdAt: -1 });
         res.status(200).json(fees);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching fees', error: error.message });
@@ -21,7 +24,7 @@ const createFee = async (req, res) => {
 
     try {
         // Check if a fee with the same name already exists
-        const existingFee = await Fee.findOne({ name });
+        const existingFee = await Fee.findOne({ name, isDeleted: { $ne: true } });
         if (existingFee) {
             return res.status(400).json({ message: 'A fee with this name already exists.' });
         }
@@ -85,9 +88,15 @@ const deleteFee = async (req, res) => {
         const fee = await Fee.findById(id);
 
         if (fee) {
-            // NOTE: In a real system, you would check if this fee is linked to any active PaymentSession or Transaction
-            // If linked, deletion should be prevented or soft-deleted. 
-            await Fee.deleteOne({ _id: id });
+            // Check if fee is used in any active PaymentSession
+            const activeSession = await PaymentSession.findOne({ 'fees.fee': id, isActive: true });
+            if (activeSession) {
+                return res.status(400).json({ 
+                    message: `Không thể xóa khoản thu này vì đang được sử dụng trong đợt thu: ${activeSession.title}` 
+                });
+            }
+
+            await Fee.findByIdAndUpdate(id, { isDeleted: true });
             res.status(200).json({ message: 'Fee successfully removed' });
         } else {
             res.status(404).json({ message: 'Fee not found' });

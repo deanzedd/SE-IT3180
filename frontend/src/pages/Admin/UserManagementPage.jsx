@@ -12,7 +12,11 @@ const UserManagementPage = () => {
 
     const tableHeaders = [
         { label: 'Họ và tên', className: 'text-left'},
+        { label: 'Tên đăng nhập', className: 'text-left'},
+        { label: 'Email', className: 'text-left'},
+        { label: 'SĐT', className: 'text-left'},
         { label: 'Vai trò', className: 'text-left'},
+        { label: 'Trạng thái', className: 'text-left'},
         { label: 'Thao tác', className: 'text-right'}
     ];
 
@@ -25,13 +29,20 @@ const UserManagementPage = () => {
                     </div>
                     <div className="min-w-0"> {/* Tránh tràn text nếu tên quá dài */}
                         <p className="text-gray-800 font-medium truncate">{nguoiDung.fullName}</p>
-                        <p className="text-gray-500 text-xs truncate">{nguoiDung.email}</p>
                     </div>
                 </div>
             </td>
+            <td className="px-6 py-4 text-gray-600">{nguoiDung.username}</td>
+            <td className="px-6 py-4 text-gray-600">{nguoiDung.email}</td>
+            <td className="px-6 py-4 text-gray-600">{nguoiDung.phone}</td>
             <td className="px-6 py-4">
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getVaiTroColor(nguoiDung.role)}`}>
                     {getVaiTroLabel(nguoiDung.role)}
+                </span>
+            </td>
+            <td className="px-6 py-4">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${nguoiDung.status === 'Hoạt động' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
+                    {nguoiDung.status}
                 </span>
             </td>
             <td className="px-6 py-4">
@@ -431,7 +442,6 @@ const UserManagementPage = () => {
                                     <label className="block text-gray-700 mb-2 font-medium">Email</label>
                                     <input
                                         type="email"
-                                        required
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -443,7 +453,6 @@ const UserManagementPage = () => {
                                     <label className="block text-gray-700 mb-2 font-medium">Số điện thoại</label>
                                     <input
                                         type="tel"
-                                        required
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"

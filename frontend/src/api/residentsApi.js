@@ -1,8 +1,8 @@
 import axiosClient from './axiosClient';
 
 const residentsApi = {
-    getAll() {
-        return axiosClient.get('/residents');
+    getAll(params) {
+        return axiosClient.get('/residents', { params });
     },
     getById(id) {
         return axiosClient.get(`/residents/${id}`);

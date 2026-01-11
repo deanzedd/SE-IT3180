@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, User, ArrowRightLeft, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit, Trash2, User, ArrowRightLeft, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import SearchBar from '../../components/common/SearchBar';
@@ -29,6 +29,8 @@ const ResidentListPage = () => {
     const [households, setHouseholds] = useState([]);
     const [aptSearch, setAptSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [showDeleted, setShowDeleted] = useState(false);
+    const [deletedResidents, setDeletedResidents] = useState([]);
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -73,6 +75,21 @@ const ResidentListPage = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    const fetchDeletedResidents = async () => {
+        try {
+            const response = await residentsApi.getAll({ isDeleted: true });
+            setDeletedResidents(Array.isArray(response.data) ? response.data : []);
+        } catch (error) {
+            console.error('Lỗi tải dữ liệu đã xóa:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (showDeleted) {
+            fetchDeletedResidents();
+        }
+    }, [showDeleted]);
 
 
     const filteredResidents = residents?.filter(resident =>
@@ -160,6 +177,28 @@ const ResidentListPage = () => {
             )}
         </tr>
     );
+
+    const renderDeletedRow = (resident) => (
+        <tr key={resident._id} className="bg-gray-50 text-gray-500">
+            <td className="py-4 px-6">{resident.fullName}</td>
+            <td className="py-4 px-6">{resident.idNumber}</td>
+            <td className="py-4 px-6">{resident.dob ? new Date(resident.dob).toLocaleDateString('vi-VN') : '-'}</td>
+            <td className="py-4 px-6">{resident.gender === 'male' ? 'Nam' : resident.gender === 'female' ? 'Nữ' : 'Khác'}</td>
+            <td className="py-4 px-6">{resident.phone || '-'}</td>
+            <td className="py-4 px-6">{resident.household?.apartmentNumber}</td>
+            <td className="py-4 px-6">
+                {resident.relationToOwner === 'owner' ? 'Chủ hộ' : resident.relationToOwner === 'spouse' ? 'Vợ/Chồng' : resident.relationToOwner === 'child' ? 'Con' : 'Khác'}
+            </td>
+            <td className="py-4 px-6">Đã xóa</td>
+            {canEdit && (
+            <td className="py-4 px-6">
+                <button onClick={() => handleRestore(resident._id)} className="text-green-500 hover:text-green-700" title="Khôi phục">
+                    <RotateCcw size={18} />
+                </button>
+            </td>
+            )}
+        </tr>
+    );
     const handleOpenModal = (resident = null) => {
         if (resident) {
             setEditingResident(resident);
@@ -215,6 +254,18 @@ const ResidentListPage = () => {
                 fetchData();
             } catch (error) {
                 alert("Xóa thất bại ");
+            }
+        }
+    };
+
+    const handleRestore = async (id) => {
+        if (window.confirm('Khôi phục nhân khẩu này?')) {
+            try {
+                await residentsApi.update(id, { isDeleted: false });
+                fetchDeletedResidents();
+                fetchData();
+            } catch (error) {
+                alert(error.response?.data?.message || 'Lỗi khi khôi phục');
             }
         }
     };
@@ -282,6 +333,27 @@ const ResidentListPage = () => {
                     }
                 />
             </div>
+
+            <div className="mt-4">
+                <button
+                    onClick={() => setShowDeleted(!showDeleted)}
+                    className="text-gray-500 hover:text-gray-700 underline text-sm flex items-center gap-1"
+                >
+                    {showDeleted ? 'Ẩn nhân khẩu đã xóa' : 'Hiển thị nhân khẩu đã xóa'}
+                </button>
+
+                {showDeleted && (
+                    <div className="mt-4 border-t pt-4">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-600">Danh sách nhân khẩu đã xóa</h3>
+                        <Table 
+                            headers={tableHeaders} 
+                            data={deletedResidents} 
+                            renderRow={renderDeletedRow} 
+                        />
+                    </div>
+                )}
+            </div>
+
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <div className="p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">

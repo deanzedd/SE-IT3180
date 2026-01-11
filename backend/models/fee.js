@@ -18,7 +18,8 @@ const feeSchema = mongoose.Schema({
         enum: ['area', 'person', 'household', 'bike', 'car', 'fixed', 'm^3', 'electricity', 'default'], 
         required: function() { return this.type !== 'voluntary'; } // Cập nhật lại điều kiện nếu cần
     },
-    description: String
+    description: String,
+    isDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Fee', feeSchema);

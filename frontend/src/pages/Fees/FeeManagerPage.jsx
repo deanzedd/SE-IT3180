@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Receipt } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, RotateCcw } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Table from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
@@ -15,6 +15,8 @@ const FeeManagerPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingFee, setEditingFee] = useState(null);
+    const [showDeleted, setShowDeleted] = useState(false);
+    const [deletedFees, setDeletedFees] = useState([]);
 
     // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
     const canEdit = ['admin', 'accountant'].includes(user?.role);
@@ -34,6 +36,21 @@ const FeeManagerPage = () => {
             setLoading(false);
         }
     };
+
+    const fetchDeletedFees = async () => {
+        try {
+            const response = await feeApi.getAll({ isDeleted: true });
+            setDeletedFees(response.data);
+        } catch (error) {
+            console.error('Lỗi tải dữ liệu đã xóa:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (showDeleted) {
+            fetchDeletedFees();
+        }
+    }, [showDeleted]);
 
     const headers = [
         { label: 'Tên khoản thu', className: 'text-left' },
@@ -83,6 +100,35 @@ const FeeManagerPage = () => {
         </tr>
     );
 
+    const renderDeletedRow = (item) => (
+        <tr key={item._id} className="bg-gray-50 text-gray-500">
+            <td className="py-4 px-6 font-medium">{item.name}</td>
+            <td className="py-4 px-6">
+                {item.unitPrice ? `${new Intl.NumberFormat('vi-VN').format(item.unitPrice)} đ` : '-'}
+            </td>
+            <td className="py-4 px-6">
+                {item.unit ? getUnitLabel(item.unit) : '-'}
+            </td>
+            <td className="py-4 px-6">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600`}>
+                    {item.type === 'mandatory_automatic' && 'Bắt buộc (Tự động)'}
+                    {item.type === 'mandatory_manual' && 'Bắt buộc (Thủ công)'}
+                    {item.type === 'voluntary' && 'Tự nguyện'}
+                </span>
+            </td>
+            <td className="py-4 px-6 italic truncate max-w-xs">{item.description}</td>
+            {canEdit && (
+            <td className="py-4 px-6">
+                <div className="flex gap-3">
+                    <button onClick={() => handleRestore(item._id)} className="flex items-center justify-center w-7 h-7 rounded-md text-green-500 hover:text-green-700 hover:bg-green-50 transition-colors" title="Khôi phục">
+                        <RotateCcw size={18} />
+                    </button>
+                </div>
+            </td>
+            )}
+        </tr>
+    );
+
     const handleOpenModal = (fee = null) => {
         setEditingFee(fee);
         setIsModalOpen(true);
@@ -107,6 +153,18 @@ const FeeManagerPage = () => {
             feeApi.remove(id)
                 .then(() => fetchFees())
                 .catch(error => alert('Lỗi khi xóa: ' + (error.response?.data?.message || error.message)));
+        }
+    };
+
+    const handleRestore = async (id) => {
+        if (window.confirm('Khôi phục khoản thu này?')) {
+            try {
+                await feeApi.update(id, { isDeleted: false });
+                fetchDeletedFees();
+                fetchFees();
+            } catch (error) {
+                alert('Lỗi khi khôi phục: ' + (error.response?.data?.message || error.message));
+            }
         }
     };
 
@@ -171,6 +229,26 @@ const FeeManagerPage = () => {
                 renderRow={renderRow}
                 footerText={<>Tổng số: <span className="font-bold text-gray-700">{filteredFees.length}</span> loại phí</>}
             />
+
+            <div className="mt-4">
+                <button
+                    onClick={() => setShowDeleted(!showDeleted)}
+                    className="text-gray-500 hover:text-gray-700 underline text-sm flex items-center gap-1"
+                >
+                    {showDeleted ? 'Ẩn khoản thu đã xóa' : 'Hiển thị khoản thu đã xóa'}
+                </button>
+
+                {showDeleted && (
+                    <div className="mt-4 border-t pt-4">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-600">Danh sách khoản thu đã xóa</h3>
+                        <Table 
+                            headers={headers} 
+                            data={deletedFees} 
+                            renderRow={renderDeletedRow} 
+                        />
+                    </div>
+                )}
+            </div>
 
             <AddFeeModal 
                 isOpen={isModalOpen} 

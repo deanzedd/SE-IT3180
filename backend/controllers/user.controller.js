@@ -43,7 +43,7 @@ const getUserById = async (req, res) => {
 // @access    Private (Admin only)
 // @note      UC011: Thêm tài khoản cán bộ
 const createUser = async (req, res) => {
-    const { username, password, fullName, role } = req.body;
+    const { username, password, fullName, role, email, phone, status } = req.body;
 
     // Validation
     if (!username || !password || !fullName || !role) {
@@ -71,7 +71,10 @@ const createUser = async (req, res) => {
             username,
             password, // Will be hashed by the pre-save hook
             fullName,
-            role
+            role,
+            email,
+            phone,
+            status
         });
 
         const createdUser = await user.save();
@@ -81,6 +84,9 @@ const createUser = async (req, res) => {
             _id: createdUser._id,
             username: createdUser.username,
             fullName: createdUser.fullName,
+            email: createdUser.email,
+            phone: createdUser.phone,
+            status: createdUser.status,
             role: createdUser.role,
             createdAt: createdUser.createdAt,
             updatedAt: createdUser.updatedAt
@@ -98,7 +104,7 @@ const createUser = async (req, res) => {
 // @note      UC012: Sửa thông tin tài khoản cán bộ
 const updateUser = async (req, res) => {
     const { id } = req.params;
-    const { fullName, role, password } = req.body;
+    const { fullName, role, password, email, phone, status } = req.body;
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -114,6 +120,9 @@ const updateUser = async (req, res) => {
 
         // Update fields if provided
         if (fullName) user.fullName = fullName;
+        if (email) user.email = email;
+        if (phone) user.phone = phone;
+        if (status) user.status = status;
         if (role) {
             // Validate role
             if (!['admin', 'manager', 'accountant'].includes(role)) {
@@ -132,6 +141,9 @@ const updateUser = async (req, res) => {
             _id: updatedUser._id,
             username: updatedUser.username,
             fullName: updatedUser.fullName,
+            email: updatedUser.email,
+            phone: updatedUser.phone,
+            status: updatedUser.status,
             role: updatedUser.role,
             createdAt: updatedUser.createdAt,
             updatedAt: updatedUser.updatedAt
@@ -180,7 +192,10 @@ const deleteUser = async (req, res) => {
                 _id: user._id,
                 username: user.username,
                 fullName: user.fullName,
-                role: user.role
+                role: user.role,
+                email: user.email,
+                phone: user.phone,
+                status: user.status
             }
         });
     } catch (error) {

@@ -1,8 +1,8 @@
 import axiosClient from './axiosClient';
 
 const feeApi = {
-    getAll() {
-        return axiosClient.get('/fees');
+    getAll(params) {
+        return axiosClient.get('/fees', { params });
     },
     getById(id) {
         return axiosClient.get(`/fees/${id}`);

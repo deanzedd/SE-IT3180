@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import householdApi from '../../api/householdApi';
-import { Plus, Edit, Trash2, User, Home as HomeIcon, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit, Trash2, User, Home as HomeIcon, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button.jsx';
 import SearchBar from '../../components/common/SearchBar.jsx';
@@ -15,6 +15,8 @@ const HouseholdPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingHousehold, setEditingHousehold] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showDeleted, setShowDeleted] = useState(false);
+    const [deletedHouseholds, setDeletedHouseholds] = useState([]);
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -37,10 +39,26 @@ const HouseholdPage = () => {
             setHouseholds(response.data);
         } catch (error) {
             console.error('Lỗi tải dữ liệu:', error);
+            alert(error.response?.data?.message || 'Không thể tải dữ liệu danh sách hộ khẩu.');
         } finally {
             setLoading(false);
         }
     };
+
+    const fetchDeletedHouseholds = async () => {
+        try {
+            const response = await householdApi.getAll({ isDeleted: true });
+            setDeletedHouseholds(response.data);
+        } catch (error) {
+            console.error('Lỗi tải dữ liệu đã xóa:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (showDeleted) {
+            fetchDeletedHouseholds();
+        }
+    }, [showDeleted]);
 
     const tableHeaders = [
         { label: 'Căn hộ', className: 'text-left'},
@@ -85,6 +103,25 @@ const HouseholdPage = () => {
                         <Trash2 size={18} />
                     </button>
                 </div>
+            </td>
+            )}
+        </tr>
+    );
+
+    const renderDeletedRow = (household) => (
+        <tr key={household._id} className="bg-gray-50 text-gray-500">
+            <td className="py-4 px-6">{household.apartmentNumber}</td>
+            <td className="text-left py-4 px-6">{household.ownerName || 'Trống'}</td>
+            <td className="text-left py-4 px-6">{household.area}m²</td>
+            <td className="text-left py-4 px-6">{household.members?.length || 0}</td>
+            <td className="text-left py-4 px-6">{household.motorbikeNumber}</td>
+            <td className="text-left py-4 px-6">{household.carNumber}</td>
+            <td className="text-left py-4 px-6">Đã xóa</td>
+            {canEdit && (
+            <td className="py-4 px-6">
+                <button onClick={() => handleRestore(household._id)} className="text-green-500 hover:text-green-700" title="Khôi phục">
+                    <RotateCcw size={18} />
+                </button>
             </td>
             )}
         </tr>
@@ -154,8 +191,20 @@ const HouseholdPage = () => {
                     await householdApi.remove(id);
                     fetchHouseholds();
                 } catch (error) {
-                    alert('Lỗi khi xóa');
+                    alert(error.response?.data?.message || 'Lỗi khi xóa hộ khẩu');
                 }
+        }
+    };
+
+    const handleRestore = async (id) => {
+        if (window.confirm('Khôi phục căn hộ này?')) {
+            try {
+                await householdApi.update(id, { isDeleted: false });
+                fetchDeletedHouseholds();
+                fetchHouseholds();
+            } catch (error) {
+                alert(error.response?.data?.message || 'Lỗi khi khôi phục');
+            }
         }
     };
 
@@ -199,6 +248,26 @@ const HouseholdPage = () => {
                 footerText={<>Kết quả: <span className="font-bold">{filteredHouseholds.length}</span> căn hộ</>}
             />
 
+            <div className="mt-4">
+                <button
+                    onClick={() => setShowDeleted(!showDeleted)}
+                    className="text-gray-500 hover:text-gray-700 underline text-sm flex items-center gap-1"
+                >
+                    {showDeleted ? 'Ẩn căn hộ đã xóa' : 'Hiển thị căn hộ đã xóa'}
+                </button>
+
+                {showDeleted && (
+                    <div className="mt-4 border-t pt-4">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-600">Danh sách căn hộ đã xóa</h3>
+                        <Table 
+                            headers={tableHeaders} 
+                            data={deletedHouseholds} 
+                            renderRow={renderDeletedRow} 
+                        />
+                    </div>
+                )}
+            </div>
+
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <div className="p-6">
                     <h3 className="text-xl font-bold mb-6">{editingHousehold ? 'Sửa hộ khẩu' : 'Thêm hộ khẩu'}</h3>
@@ -222,13 +291,6 @@ const HouseholdPage = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Ô tô</label>
                                 <input type="number" value={formData.carNumber} onChange={(e) => setFormData({ ...formData, carNumber: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-                            <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="active">Đang ở</option>
-                                <option value="inactive">Trống</option>
-                            </select>
                         </div>
                         <div className="flex gap-4 pt-6 mt-6 border-t border-gray-100">
                             <Button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-300 text-gray-700">Hủy</Button>
