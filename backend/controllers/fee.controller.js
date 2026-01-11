@@ -7,10 +7,29 @@ const mongoose = require('mongoose');
 // @access    Private
 const getFees = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || '';
+
         const isDeleted = req.query.isDeleted === 'true' || req.query.isDeleted === true;
         const filter = isDeleted ? { isDeleted: true } : { isDeleted: { $ne: true } };
-        const fees = await Fee.find(filter).sort({ createdAt: -1 });
-        res.status(200).json(fees);
+        
+        if (search) {
+            filter.name = { $regex: search, $options: 'i' };
+        }
+
+        const total = await Fee.countDocuments(filter);
+        const fees = await Fee.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit);
+        res.status(200).json({
+            data: fees,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi khi lấy danh sách khoản thu', error: error.message });
     }

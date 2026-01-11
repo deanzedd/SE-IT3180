@@ -5,12 +5,44 @@ const Household = require('../models/household'); // Import để kiểm tra h�
 // @route   GET /api/residents
 const getResidents = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || '';
+
         const isDeleted = req.query.isDeleted === 'true' || req.query.isDeleted === true;
         const filter = isDeleted ? { isDeleted: true } : { isDeleted: { $ne: true } };
 
+        if (search) {
+            // Tìm các hộ khẩu có số phòng khớp với từ khóa tìm kiếm
+            const matchingHouseholds = await Household.find({ 
+                apartmentNumber: { $regex: search, $options: 'i' } 
+            }).select('_id');
+            const householdIds = matchingHouseholds.map(h => h._id);
+
+            filter.$or = [
+                { fullName: { $regex: search, $options: 'i' } },
+                { idNumber: { $regex: search, $options: 'i' } },
+                { household: { $in: householdIds } }
+            ];
+        }
+
+        const total = await Resident.countDocuments(filter);
         // .populate('household') giúp lấy luôn thông tin chi tiết của hộ khẩu thay vì chỉ trả về ID
-        const residents = await Resident.find(filter).populate('household', 'apartmentNumber area');
-        res.status(200).json(residents);
+        const residents = await Resident.find(filter)
+            .populate('household', 'apartmentNumber area')
+            .skip(skip)
+            .limit(limit);
+            
+        res.status(200).json({
+            data: residents,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

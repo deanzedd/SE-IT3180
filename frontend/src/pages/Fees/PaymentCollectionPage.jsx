@@ -15,6 +15,7 @@ import EditPaymentSession from '../PaymentSessions/EditPaymentSessionModal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 // const existingFeeTypes = [
 //     { id: 1, name: 'Phí quản lý chung cư', price: 7000 },
 //     { id: 2, name: 'Phí vệ sinh', price: 30000 },
@@ -42,6 +43,9 @@ const PaymentCollectionPage = () => {
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalSessions, setTotalSessions] = useState(0);
 
     // View state: LIST | DETAIL | INPUT_MONEY
     const [view, setView] = useState('LIST');
@@ -79,8 +83,11 @@ const PaymentCollectionPage = () => {
     const fetchSessions = async () => {
         try {
             setLoading(true);
-            const response = await paymentSessionApi.getAll();
-            setSessions(Array.isArray(response.data) ? response.data : []);
+            const response = await paymentSessionApi.getAll({ page });
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setSessions(data || []);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            setTotalSessions(response.data.meta?.total || 0);
         } catch (error) {
             console.error('Lỗi tải danh sách đợt thu:', error);
         } finally {
@@ -90,7 +97,7 @@ const PaymentCollectionPage = () => {
 
     const fetchAllFees = async () => {
         try {
-            const response = await feeApi.getAll(); // Gọi tới API danh mục phí
+            const response = await feeApi.getAll({ limit: 1000 }); // Gọi tới API danh mục phí (Lấy tất cả)
             setAllFees(response.data);
         } catch (error) {
             console.error('Lỗi tải danh mục phí:', error);
@@ -359,7 +366,7 @@ const PaymentCollectionPage = () => {
                 </div>
                 <div>
                     <p className="text-gray-600 text-sm">Tổng số đợt thu</p>
-                    <p className="text-gray-900 font-bold">{sessions.length}</p>
+                    <p className="text-gray-900 font-bold">{totalSessions}</p>
                 </div>
             </div>
 
@@ -466,6 +473,12 @@ const PaymentCollectionPage = () => {
                     </div>
                 )}
             </div>
+
+            <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                onPageChange={setPage} 
+            />
         </div>
     );
 

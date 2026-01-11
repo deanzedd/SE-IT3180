@@ -7,6 +7,7 @@ import Modal from '../../components/common/Modal';
 import userApi from '../../api/userApi';
 import { useToast } from '../../context/ToastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 const UserManagementPage = () => {
     const toast = useToast();
@@ -68,6 +69,9 @@ const UserManagementPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [viewingNguoiDung, setViewingNguoiDung] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalUsers, setTotalUsers] = useState(0);
 
     // Filter checkboxes
     const [filterVaiTro, setFilterVaiTro] = useState({
@@ -88,13 +92,24 @@ const UserManagementPage = () => {
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [page]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setPage(1);
+            fetchUsers();
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await userApi.getAll();
-            setNguoiDungs(response.data);
+            const response = await userApi.getAll({ page, search: searchTerm });
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setNguoiDungs(data || []);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            setTotalUsers(response.data.meta?.total || 0);
         } catch (error) {
             console.error('Lỗi tải dữ liệu:', error);
         } finally {
@@ -165,24 +180,22 @@ const UserManagementPage = () => {
     };
 
     // Filter logic
+    // Note: Search is now handled by backend, but role filtering is still client-side for simplicity 
+    // unless we move it to backend too. For now, let's keep role filtering client side on the current page data
+    // or move it to backend. Moving to backend is better.
+    // But to keep changes minimal, I will apply role filter on the fetched page data.
     const filteredNguoiDungs = nguoiDungs.filter((n) => {
-        const matchesSearch =
-            (n.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (n.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (n.email || '').toLowerCase().includes(searchTerm.toLowerCase());
 
         const hasActiveFilter = filterVaiTro.admin || filterVaiTro.manager || filterVaiTro.accountant;
 
-        if (!hasActiveFilter) {
-            return matchesSearch;
-        }
+        if (!hasActiveFilter) return true;
 
         const matchesFilter =
             (filterVaiTro.admin && n.role === 'admin') ||
             (filterVaiTro.manager && n.role === 'manager') ||
             (filterVaiTro.accountant && n.role === 'accountant');
 
-        return matchesSearch && matchesFilter;
+        return matchesFilter;
     });
 
     const getVaiTroLabel = (role) => {
@@ -214,28 +227,28 @@ const UserManagementPage = () => {
     const stats = [
         {
             label: 'Tổng người dùng',
-            value: nguoiDungs.length,
+            value: totalUsers,
             icon: User,
             color: 'bg-indigo-500',
         },
-        {
-            label: 'Admin',
-            value: nguoiDungs.filter((n) => n.role === 'admin').length,
-            icon: Shield,
-            color: 'bg-red-500',
-        },
-        {
-            label: 'Quản lý',
-            value: nguoiDungs.filter((n) => n.role === 'manager').length,
-            icon: User,
-            color: 'bg-blue-500',
-        },
-        {
-            label: 'Kế toán',
-            value: nguoiDungs.filter((n) => n.role === 'accountant').length,
-            icon: User,
-            color: 'bg-green-500',
-        },
+        // {
+        //     label: 'Admin',
+        //     value: nguoiDungs.filter((n) => n.role === 'admin').length,
+        //     icon: Shield,
+        //     color: 'bg-red-500',
+        // },
+        // {
+        //     label: 'Quản lý',
+        //     value: nguoiDungs.filter((n) => n.role === 'manager').length,
+        //     icon: User,
+        //     color: 'bg-blue-500',
+        // },
+        // {
+        //     label: 'Kế toán',
+        //     value: nguoiDungs.filter((n) => n.role === 'accountant').length,
+        //     icon: User,
+        //     color: 'bg-green-500',
+        // },
     ];
 
     if (loading) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
@@ -334,9 +347,15 @@ const UserManagementPage = () => {
                     renderRow={renderUserRow}
                     footerText={
                         <>
-                            Kết quá gồm: <span className="font-bold text-gray-700">{filteredNguoiDungs.length}</span> người dùng
+                            Hiển thị: <span className="font-bold text-gray-700">{filteredNguoiDungs.length}</span> / {totalUsers} người dùng
                         </>
                     }
+                />
+
+                <Pagination 
+                    currentPage={page} 
+                    totalPages={totalPages} 
+                    onPageChange={setPage} 
                 />
             </div>
             {/* View Detail Modal, TẠM BỎ*/}

@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { exportToExcel } from '../../utils/excelHandle';
 import { useToast } from '../../context/ToastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 // const initialResidents = [
 //     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
@@ -35,6 +36,9 @@ const ResidentListPage = () => {
     const [showDeleted, setShowDeleted] = useState(false);
     const [deletedResidents, setDeletedResidents] = useState([]);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResidents, setTotalResidents] = useState(0);
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -57,12 +61,15 @@ const ResidentListPage = () => {
         try {
             setLoading(true);
             const [resResidents, resHouseholds] = await Promise.all([
-                residentsApi.getAll(),
-                householdApi.getAll()
+                residentsApi.getAll({ page, search: searchTerm }),
+                householdApi.getAll({ limit: 1000 }) // Lấy tất cả hộ khẩu cho dropdown
             ]);
 
             // Kiểm tra dữ liệu trả về có phải mảng không trước khi set
-            setResidents(Array.isArray(resResidents.data) ? resResidents.data : []);
+            const data = Array.isArray(resResidents.data) ? resResidents.data : resResidents.data.data;
+            setResidents(data || []);
+            setTotalPages(resResidents.data.meta?.totalPages || 1);
+            setTotalResidents(resResidents.data.meta?.total || 0);
             setHouseholds(Array.isArray(resHouseholds.data) ? resHouseholds.data : []);
             
         } catch (error) {
@@ -78,7 +85,16 @@ const ResidentListPage = () => {
     // 2. useEffect gọi dữ liệu
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [page]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setPage(1);
+            fetchData();
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     const fetchDeletedResidents = async () => {
         try {
@@ -96,14 +112,14 @@ const ResidentListPage = () => {
     }, [showDeleted]);
 
 
-    const filteredResidents = residents?.filter(resident =>
-        (resident.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (resident.idNumber || '').includes(searchTerm) ||
-        (resident.household?.apartmentNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // const filteredResidents = residents?.filter(resident =>
+    //     (resident.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //     (resident.idNumber || '').includes(searchTerm) ||
+    //     (resident.household?.apartmentNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
+    // );
 
     const handleExportExcel = () => {
-        const dataToExport = filteredResidents.map(r => ({
+        const dataToExport = residents.map(r => ({
             "Họ và tên": r.fullName,
             "CMND/CCCD": r.idNumber,
             "Ngày sinh": r.dob ? new Date(r.dob).toLocaleDateString('vi-VN') : '',
@@ -328,7 +344,7 @@ const ResidentListPage = () => {
                     </div>
                     <div>
                         <p className="text-gray-600 text-sm">Tổng số cư dân</p>
-                        <p className="text-gray-900 font-bold">{residents?.length}</p>
+                        <p className="text-gray-900 font-bold">{totalResidents}</p>
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
@@ -342,13 +358,19 @@ const ResidentListPage = () => {
             <div>
                 <Table
                     headers={tableHeaders}
-                    data={filteredResidents}
+                    data={residents}
                     renderRow={renderResidentRow}
                     footerText={
                         <>
-                            Kết quả gồm: <span className="font-bold text-gray-700">{filteredResidents.length}</span> cư dân
+                            Hiển thị: <span className="font-bold text-gray-700">{residents.length}</span> / {totalResidents} cư dân
                         </>
                     }
+                />
+
+                <Pagination 
+                    currentPage={page} 
+                    totalPages={totalPages} 
+                    onPageChange={setPage} 
                 />
             </div>
 

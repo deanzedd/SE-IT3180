@@ -7,8 +7,27 @@ const mongoose = require('mongoose');
 // @access    Private (Admin only)
 const getUsers = async (req, res) => {
     try {
-        const users = await User.find().select('-password'); // Exclude password from response
-        res.status(200).json(users);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || '';
+
+        const filter = {};
+        if (search) {
+            filter.$or = [
+                { fullName: { $regex: search, $options: 'i' } },
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const total = await User.countDocuments(filter);
+        const users = await User.find(filter).select('-password').skip(skip).limit(limit);
+        
+        res.status(200).json({
+            data: users,
+            meta: { total, page, limit, totalPages: Math.ceil(total / limit) }
+        });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi khi lấy danh sách người dùng', error: error.message });
     }

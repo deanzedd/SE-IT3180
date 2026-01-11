@@ -9,6 +9,7 @@ import feeApi from '../../api/feeApi';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 const FeeManagerPage = () => {
     const { user } = useAuth();
@@ -21,19 +22,33 @@ const FeeManagerPage = () => {
     const [showDeleted, setShowDeleted] = useState(false);
     const [deletedFees, setDeletedFees] = useState([]);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalFees, setTotalFees] = useState(0);
 
     // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
     const canEdit = ['admin', 'accountant'].includes(user?.role);
 
     useEffect(() => {
         fetchFees();
-    }, []);
+    }, [page]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setPage(1);
+            fetchFees();
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     const fetchFees = async () => {
         try {
             setLoading(true);
-            const response = await feeApi.getAll();
-            setFees(response.data);
+            const response = await feeApi.getAll({ page, search: searchTerm });
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setFees(data || []);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            setTotalFees(response.data.meta?.total || 0);
         } catch (error) {
             console.error('Lỗi tải dữ liệu:', error);
         } finally {
@@ -185,7 +200,7 @@ const FeeManagerPage = () => {
         });
     };
 
-    const filteredFees = fees.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    // const filteredFees = fees.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const getUnitLabel = (unit) => {
         const unitMap = {
@@ -228,7 +243,7 @@ const FeeManagerPage = () => {
                     </div>
                     <div>
                         <p className="text-gray-600 text-sm">Tổng danh mục phí</p>
-                        <p className="text-gray-900 font-bold">{fees.length} loại</p>
+                        <p className="text-gray-900 font-bold">{totalFees} loại</p>
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
@@ -242,9 +257,15 @@ const FeeManagerPage = () => {
 
             <Table
                 headers={headers}
-                data={filteredFees}
+                data={fees}
                 renderRow={renderRow}
-                footerText={<>Tổng số: <span className="font-bold text-gray-700">{filteredFees.length}</span> loại phí</>}
+                footerText={<>Hiển thị: <span className="font-bold text-gray-700">{fees.length}</span> / {totalFees} loại phí</>}
+            />
+
+            <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                onPageChange={setPage} 
             />
 
             <div className="mt-4">

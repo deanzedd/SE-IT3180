@@ -16,6 +16,11 @@ const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 // @access    Private
 const getPaymentSessions = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || '';
+
         const now = new Date();
         await PaymentSession.updateMany(
             {
@@ -32,15 +37,27 @@ const getPaymentSessions = async (req, res) => {
             },
             { $set: { isActive: true } }
         );
+
+        const filter = {};
+        if (search) {
+            filter.title = { $regex: search, $options: 'i' };
+        }
+
+        const total = await PaymentSession.countDocuments(filter);
         // Populate fees to see which specific Fee model is referenced
-        const sessions = await PaymentSession.find({})
+        const sessions = await PaymentSession.find(filter)
             .populate({
                 path: 'fees.fee', // Đi sâu vào mảng 'fees', populate trường 'fee'
                 select: 'name type unit' // Chỉ lấy các trường cần thiết từ Fee Model
             })
-            .sort({ startDate: -1 }); // Sắp xếp theo ngày gần nhất
+            .sort({ startDate: -1 })
+            .skip(skip)
+            .limit(limit);
 
-        res.status(200).json(sessions);
+        res.status(200).json({
+            data: sessions,
+            meta: { total, page, limit, totalPages: Math.ceil(total / limit) }
+        });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi khi lấy danh sách đợt thu', error: error.message });
     }

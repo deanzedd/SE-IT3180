@@ -12,6 +12,7 @@ import { exportToExcel } from '../../utils/excelHandle';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 const ResidenceChangePage = () => {
     const { user } = useAuth();
@@ -26,6 +27,8 @@ const ResidenceChangePage = () => {
     const [editingChange, setEditingChange] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -35,8 +38,8 @@ const ResidenceChangePage = () => {
             setLoading(true);
             const [resChanges, resResidents, resHouseholds] = await Promise.all([
                 residenceChangeApi.getAll(),
-                residentsApi.getAll(),
-                householdApi.getAll()
+                residentsApi.getAll({ limit: 1000 }), // Lấy tất cả cho modal
+                householdApi.getAll({ limit: 1000 })  // Lấy tất cả cho modal
             ]);
             setChanges(resChanges.data);
             setResidents(resResidents.data);
@@ -116,6 +119,11 @@ const ResidenceChangePage = () => {
         return matchesTab && matchesSearch;
     });
 
+    // Client-side pagination logic
+    const totalPages = Math.ceil(filteredChanges.length / ITEMS_PER_PAGE);
+    const paginatedChanges = filteredChanges.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+
     const handleExportExcel = () => {
         const dataToExport = filteredChanges.map(item => ({
             "Họ tên": item.resident?.fullName,
@@ -190,7 +198,7 @@ const ResidenceChangePage = () => {
                     </div>
                     <div>
                         <p className="text-gray-600 text-sm">Tổng số biến đổi</p>
-                        <p className="text-gray-900 font-bold">{filteredChanges.length}</p>
+                        <p className="text-gray-900 font-bold">{changes.length}</p>
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
@@ -218,11 +226,17 @@ const ResidenceChangePage = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                 <Table 
                     headers={headers} 
-                    data={filteredChanges} 
+                    data={paginatedChanges} 
                     renderRow={renderRow}
-                    footerText={<>Tổng số: <span className="font-bold">{filteredChanges.length}</span> bản ghi</>}
+                    footerText={<>Hiển thị: <span className="font-bold">{paginatedChanges.length}</span> / {filteredChanges.length} kết quả</>}
                 />
             </div>
+
+            <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                onPageChange={setPage} 
+            />
 
             <ResidenceChangeModal 
                 isOpen={isModalOpen}

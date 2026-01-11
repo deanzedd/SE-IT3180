@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext'; // Lấy user từ context
 import { exportToExcel } from '../../utils/excelHandle';
 import { useToast } from '../../context/ToastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 const HouseholdPage = () => {
     const { user } = useAuth(); // Lấy thông tin user đã đăng nhập
@@ -21,6 +22,9 @@ const HouseholdPage = () => {
     const [showDeleted, setShowDeleted] = useState(false);
     const [deletedHouseholds, setDeletedHouseholds] = useState([]);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalHouseholds, setTotalHouseholds] = useState(0);
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -36,11 +40,24 @@ const HouseholdPage = () => {
         }
     }, [user]);
 
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setPage(1); // Reset về trang 1 khi search
+            fetchHouseholds(1, searchTerm);
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
+
     const fetchHouseholds = async () => {
         try {
             setLoading(true);
-            const response = await householdApi.getAll();
-            setHouseholds(response.data);
+            const response = await householdApi.getAll({ page, search: searchTerm });
+            // Support both old array format (if backend not updated) and new paginated format
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setHouseholds(data || []);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            setTotalHouseholds(response.data.meta?.total || 0);
         } catch (error) {
             console.error('Lỗi tải dữ liệu:', error);
             toast.error(error.response?.data?.message || 'Không thể tải dữ liệu danh sách hộ khẩu.');
@@ -48,6 +65,11 @@ const HouseholdPage = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchHouseholds();
+    }, [page]);
+
 
     const fetchDeletedHouseholds = async () => {
         try {
@@ -131,12 +153,12 @@ const HouseholdPage = () => {
         </tr>
     );
 
-    const filteredHouseholds = households.filter(h =>
-        h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // const filteredHouseholds = households.filter(h =>
+    //     h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    // );
 
     const handleExportExcel = () => {
-        const dataToExport = filteredHouseholds.map(h => ({
+        const dataToExport = households.map(h => ({
             "Số phòng": h.apartmentNumber,
             "Chủ hộ": h.ownerName || 'Trống',
             "Diện tích (m2)": h.area,
@@ -251,7 +273,7 @@ const HouseholdPage = () => {
                     </div>
                     <div>
                         <p className="text-gray-600 text-sm">Tổng số căn hộ</p>
-                        <p className="text-gray-900 font-bold">{households.length}</p>
+                        <p className="text-gray-900 font-bold">{totalHouseholds}</p>
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
@@ -261,9 +283,15 @@ const HouseholdPage = () => {
 
             <Table 
                 headers={tableHeaders} 
-                data={filteredHouseholds} 
+                data={households} 
                 renderRow={renderHouseholdRow} 
-                footerText={<>Kết quả: <span className="font-bold">{filteredHouseholds.length}</span> căn hộ</>}
+                footerText={<>Hiển thị <span className="font-bold">{households.length}</span> / {totalHouseholds} kết quả</>}
+            />
+
+            <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                onPageChange={setPage} 
             />
 
             <div className="mt-4">

@@ -109,23 +109,27 @@ const seedHouseholdsAndResidents = async () => {
             apt: '101', area: 80, bikes: 2, cars: 0,
             residents: [
                 { name: 'Nguyễn Văn A', idCard: '001088000001', relation: 'owner', gender: 'male', dob: '1980-01-01' },
-                { name: 'Trần Thị B', idCard: '001088000002', relation: 'spouse', gender: 'female', dob: '1982-05-05' }
+                { name: 'Trần Thị B', idCard: '001088000002', relation: 'spouse', gender: 'female', dob: '1982-05-05' },
+                { name: 'Nguyễn Văn C', idCard: '001088000003', relation: 'child', gender: 'male', dob: '2000-01-01' },
+                { name: 'Nguyễn Thị D', idCard: '001088000004', relation: 'child', gender: 'female', dob: '2004-05-20' }
             ]
         },
         {
             apt: '102', area: 100, bikes: 1, cars: 1,
             residents: [
-                { name: 'Lê Văn C', idCard: '001088000003', relation: 'owner', gender: 'male', dob: '1975-10-10' },
-                { name: 'Phạm Thị D', idCard: '001088000004', relation: 'spouse', gender: 'female', dob: '1978-12-12' },
-                { name: 'Lê Văn E', idCard: '001088000005', relation: 'child', gender: 'male', dob: '2005-01-01' }
+                { name: 'Lê Văn E', idCard: '001088000005', relation: 'owner', gender: 'male', dob: '1975-10-10' },
+                { name: 'Phạm Thị F', idCard: '001088000006', relation: 'spouse', gender: 'female', dob: '1978-12-12' },
+                { name: 'Lê Văn G', idCard: '001088000007', relation: 'child', gender: 'male', dob: '2005-01-01' },
+                { name: 'Lê Văn H', idCard: '001088000008', relation: 'parent', gender: 'male', dob: '1945-09-02' },
+                { name: 'Ngô Thị I', idCard: '001088000009', relation: 'parent', gender: 'female', dob: '1950-04-30' }
             ]
         },
         {
             apt: '201', area: 65, bikes: 1, cars: 0,
             residents: [
-                { name: 'Hoàng Thị F', idCard: '001088000006', relation: 'owner', gender: 'female', dob: '1990-03-08' },
-                { name: 'Nguyễn Văn G', idCard: '001088000007', relation: 'child', gender: 'male', dob: '2005-08-30' },
-                { name: 'Trần Văn H', idCard: '001088000008', relation: 'renter', gender: 'male', dob: '2005-11-09' }
+                { name: 'Hoàng Thị J', idCard: '001088000010', relation: 'owner', gender: 'female', dob: '1990-03-08' },
+                { name: 'Nguyễn Văn K', idCard: '001088000011', relation: 'child', gender: 'male', dob: '2005-08-30' },
+                { name: 'Trần Văn L', idCard: '001088000012', relation: 'renter', gender: 'male', dob: '2005-11-09' }
             ]
         },
         {
@@ -407,7 +411,7 @@ const seedResidenceChanges = async () => {
     console.log('📝 Seeding Residence Changes...');
     
     // 1. Tạm vắng cho Nguyễn Văn G
-    const residentG = await Resident.findOne({ fullName: 'Nguyễn Văn G' });
+    const residentG = await Resident.findOne({ fullName: 'Nguyễn Văn K' });
     if (residentG) {
         await ResidenceChange.create({
             resident: residentG._id,
@@ -423,7 +427,7 @@ const seedResidenceChanges = async () => {
     }
 
     // 2. Tạm trú cho Trần Văn H
-    const residentH = await Resident.findOne({ fullName: 'Trần Văn H' });
+    const residentH = await Resident.findOne({ fullName: 'Trần Văn L' });
     if (residentH) {
         await ResidenceChange.create({
             resident: residentH._id,

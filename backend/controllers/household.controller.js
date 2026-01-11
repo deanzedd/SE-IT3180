@@ -6,11 +6,25 @@ const Resident = require('../models/resident');
 //DỰ KIẾN: KHI LOAD TRANG KHÔNG CẦN GỌI MEMBER, MÀ SẼ GỌI KHI BẤM NÚT CHI TIẾT
 const getHouseholds = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || '';
+
         const isDeleted = req.query.isDeleted === 'true' || req.query.isDeleted === true;
         const filter = isDeleted ? { isDeleted: true } : { isDeleted: { $ne: true } };
 
+        if (search) {
+            filter.apartmentNumber = { $regex: search, $options: 'i' };
+        }
+
+        const total = await Household.countDocuments(filter);
         // Populate members để lấy thông tin chi tiết nhân khẩu
-        const households = await Household.find(filter).populate('members').sort({ apartmentNumber: 1 });
+        const households = await Household.find(filter)
+            .populate('members')
+            .sort({ apartmentNumber: 1 })
+            .skip(skip)
+            .limit(limit);
         
         // Map qua từng hộ để tìm chủ hộ và thêm trường ownerName
         const data = households.map(h => {
@@ -24,7 +38,15 @@ const getHouseholds = async (req, res) => {
             };
         });
 
-        res.status(200).json(data);
+        res.status(200).json({
+            data,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
