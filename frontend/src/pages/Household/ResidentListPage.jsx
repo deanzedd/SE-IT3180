@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, User, ArrowRightLeft, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit, Trash2, User, ArrowRightLeft, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import SearchBar from '../../components/common/SearchBar';
@@ -10,16 +10,13 @@ import residentsApi from '../../api/residentsApi';
 import householdApi from '../../api/householdApi';
 import { useNavigate } from 'react-router-dom';
 import { exportToExcel } from '../../utils/excelHandle';
-
-// const initialResidents = [
-//     { id: 1, name: 'Nguyễn Văn A', idCard: '001234567890', birthDate: '15/05/1980', gender: 'Nam', phone: '0901234567', apartment: 'A101', relationship: 'Chủ hộ', moveInDate: '01/01/2020' },
-//     { id: 2, name: 'Nguyễn Thị B', idCard: '001234567891', birthDate: '20/08/1985', gender: 'Nữ', phone: '0901234568', apartment: 'A101', relationship: 'Vợ/Chồng', moveInDate: '01/01/2020' },
-//     { id: 3, name: 'Nguyễn Văn C', idCard: '001234567892', birthDate: '10/03/2010', gender: 'Nam', phone: '', apartment: 'A101', relationship: 'Con', moveInDate: '01/01/2020' },
-//     { id: 4, name: 'Trần Thị D', idCard: '001234567893', birthDate: '25/11/1978', gender: 'Nữ', phone: '0901234569', apartment: 'A202', relationship: 'Chủ hộ', moveInDate: '15/06/2021' },
-// ];
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 const ResidentListPage = () => {
     const { user } = useAuth();
+    const toast = useToast();
     const navigate = useNavigate();
     const [residents, setResidents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -29,6 +26,12 @@ const ResidentListPage = () => {
     const [households, setHouseholds] = useState([]);
     const [aptSearch, setAptSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [showDeleted, setShowDeleted] = useState(false);
+    const [deletedResidents, setDeletedResidents] = useState([]);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResidents, setTotalResidents] = useState(0);
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -44,19 +47,23 @@ const ResidentListPage = () => {
         gender: 'male',
         phone: '',
         household: '', // Đây là ID của hộ khẩu
-        relationToOwner: 'owner' // Default value - must be one of the enum values
+        relationToOwner: 'owner', // Default value - must be one of the enum values
+        status: 'permanent_residence'
     });
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const [resResidents, resHouseholds] = await Promise.all([
-                residentsApi.getAll(),
-                householdApi.getAll()
+                residentsApi.getAll({ page, search: searchTerm }),
+                householdApi.getAll({ limit: 1000 }) // Lấy tất cả hộ khẩu cho dropdown
             ]);
 
             // Kiểm tra dữ liệu trả về có phải mảng không trước khi set
-            setResidents(Array.isArray(resResidents.data) ? resResidents.data : []);
+            const data = Array.isArray(resResidents.data) ? resResidents.data : resResidents.data.data;
+            setResidents(data || []);
+            setTotalPages(resResidents.data.meta?.totalPages || 1);
+            setTotalResidents(resResidents.data.meta?.total || 0);
             setHouseholds(Array.isArray(resHouseholds.data) ? resHouseholds.data : []);
             
         } catch (error) {
@@ -72,17 +79,41 @@ const ResidentListPage = () => {
     // 2. useEffect gọi dữ liệu
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [page]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setPage(1);
+            fetchData();
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
+
+    const fetchDeletedResidents = async () => {
+        try {
+            const response = await residentsApi.getAll({ isDeleted: true });
+            setDeletedResidents(Array.isArray(response.data) ? response.data : []);
+        } catch (error) {
+            console.error('Lỗi tải dữ liệu đã xóa:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (showDeleted) {
+            fetchDeletedResidents();
+        }
+    }, [showDeleted]);
 
 
-    const filteredResidents = residents?.filter(resident =>
-        (resident.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (resident.idNumber || '').includes(searchTerm) ||
-        (resident.household?.apartmentNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // const filteredResidents = residents?.filter(resident =>
+    //     (resident.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //     (resident.idNumber || '').includes(searchTerm) ||
+    //     (resident.household?.apartmentNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
+    // );
 
     const handleExportExcel = () => {
-        const dataToExport = filteredResidents.map(r => ({
+        const dataToExport = residents.map(r => ({
             "Họ và tên": r.fullName,
             "CMND/CCCD": r.idNumber,
             "Ngày sinh": r.dob ? new Date(r.dob).toLocaleDateString('vi-VN') : '',
@@ -160,6 +191,28 @@ const ResidentListPage = () => {
             )}
         </tr>
     );
+
+    const renderDeletedRow = (resident) => (
+        <tr key={resident._id} className="bg-gray-50 text-gray-500">
+            <td className="py-4 px-6">{resident.fullName}</td>
+            <td className="py-4 px-6">{resident.idNumber}</td>
+            <td className="py-4 px-6">{resident.dob ? new Date(resident.dob).toLocaleDateString('vi-VN') : '-'}</td>
+            <td className="py-4 px-6">{resident.gender === 'male' ? 'Nam' : resident.gender === 'female' ? 'Nữ' : 'Khác'}</td>
+            <td className="py-4 px-6">{resident.phone || '-'}</td>
+            <td className="py-4 px-6">{resident.household?.apartmentNumber}</td>
+            <td className="py-4 px-6">
+                {resident.relationToOwner === 'owner' ? 'Chủ hộ' : resident.relationToOwner === 'spouse' ? 'Vợ/Chồng' : resident.relationToOwner === 'child' ? 'Con' : 'Khác'}
+            </td>
+            <td className="py-4 px-6">Đã xóa</td>
+            {canEdit && (
+            <td className="py-4 px-6">
+                <button onClick={() => handleRestore(resident._id)} className="text-green-500 hover:text-green-700" title="Khôi phục">
+                    <RotateCcw size={18} />
+                </button>
+            </td>
+            )}
+        </tr>
+    );
     const handleOpenModal = (resident = null) => {
         if (resident) {
             setEditingResident(resident);
@@ -172,11 +225,12 @@ const ResidentListPage = () => {
                 gender: resident.gender,
                 phone: resident.phone || '',
                 household: resident.household?._id || '',
-                relationToOwner: resident.relationToOwner
+                relationToOwner: resident.relationToOwner,
+                status: resident.status || 'permanent_residence'
             });
         } else {
             setEditingResident(null);
-            setFormData({ fullName: '', idNumber: '', dob: '', gender: 'male', phone: '', household: '', relationToOwner: 'owner' });
+            setFormData({ fullName: '', idNumber: '', dob: '', gender: 'male', phone: '', household: '', relationToOwner: 'owner', status: 'permanent_residence' });
         }
         setIsModalOpen(true);
     };
@@ -186,7 +240,7 @@ const ResidentListPage = () => {
         
         // Validate that household is selected
         if (!formData.household) {
-            alert('Vui lòng chọn hộ khẩu');
+            toast.warning('Vui lòng chọn hộ khẩu');
             return;
         }
         
@@ -202,21 +256,47 @@ const ResidentListPage = () => {
             
             setIsModalOpen(false);
             setEditingResident(null); // Reset trạng thái chỉnh sửa
+            toast.success(editingResident ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
             console.error("Lỗi khi lưu:", error);
-            alert(error.response?.data?.message || "Có lỗi xảy ra khi lưu dữ liệu");
+            toast.error(error.response?.data?.message || "Có lỗi xảy ra khi lưu dữ liệu");
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa nhân khẩu này?')) {
-            try {
-                await residentsApi.remove(id);
-                fetchData();
-            } catch (error) {
-                alert("Xóa thất bại ");
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa nhân khẩu',
+            message: 'Bạn có chắc chắn muốn xóa nhân khẩu này?',
+            onConfirm: async () => {
+                try {
+                    await residentsApi.remove(id);
+                    fetchData();
+                    toast.success('Đã xóa nhân khẩu');
+                } catch (error) {
+                    toast.error(error.response?.data?.message || "Xóa thất bại");
+                }
             }
-        }
+        });
+    };
+
+    const handleRestore = async (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Khôi phục nhân khẩu',
+            message: 'Bạn có muốn khôi phục nhân khẩu này?',
+            type: 'info',
+            onConfirm: async () => {
+                try {
+                    await residentsApi.update(id, { isDeleted: false });
+                    fetchDeletedResidents();
+                    fetchData();
+                    toast.success('Khôi phục thành công');
+                } catch (error) {
+                    toast.error(error.response?.data?.message || 'Lỗi khi khôi phục');
+                }
+            }
+        });
     };
 
     return (
@@ -259,7 +339,7 @@ const ResidentListPage = () => {
                     </div>
                     <div>
                         <p className="text-gray-600 text-sm">Tổng số cư dân</p>
-                        <p className="text-gray-900 font-bold">{residents?.length}</p>
+                        <p className="text-gray-900 font-bold">{totalResidents}</p>
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
@@ -273,15 +353,42 @@ const ResidentListPage = () => {
             <div>
                 <Table
                     headers={tableHeaders}
-                    data={filteredResidents}
+                    data={residents}
                     renderRow={renderResidentRow}
                     footerText={
                         <>
-                            Kết quả gồm: <span className="font-bold text-gray-700">{filteredResidents.length}</span> cư dân
+                            Hiển thị: <span className="font-bold text-gray-700">{residents.length}</span> / {totalResidents} cư dân
                         </>
                     }
                 />
+
+                <Pagination 
+                    currentPage={page} 
+                    totalPages={totalPages} 
+                    onPageChange={setPage} 
+                />
             </div>
+
+            <div className="mt-4">
+                <button
+                    onClick={() => setShowDeleted(!showDeleted)}
+                    className="text-gray-500 hover:text-gray-700 underline text-sm flex items-center gap-1"
+                >
+                    {showDeleted ? 'Ẩn nhân khẩu đã xóa' : 'Hiển thị nhân khẩu đã xóa'}
+                </button>
+
+                {showDeleted && (
+                    <div className="mt-4 border-t pt-4">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-600">Danh sách nhân khẩu đã xóa</h3>
+                        <Table 
+                            headers={tableHeaders} 
+                            data={deletedResidents} 
+                            renderRow={renderDeletedRow} 
+                        />
+                    </div>
+                )}
+            </div>
+
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <div className="p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -370,7 +477,14 @@ const ResidentListPage = () => {
                                     <option value="other">Khác</option>
                                 </select>
                             </div>
-                            {/* <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày vào</label><input value={formData.moveInDate} onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div> */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái cư trú</label>
+                                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="permanent_residence">Thường trú</option>
+                                    <option value="temporary_residence">Tạm trú</option>
+                                    <option value="temporary_absence">Tạm vắng</option>
+                                </select>
+                            </div>
                         </div>
 
                         {/* <div className="flex gap-3 justify-end pt-4 border-t mt-6">
@@ -401,6 +515,11 @@ const ResidentListPage = () => {
                     </form>
                 </div>
             </Modal>
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            />
         </div>
     );
 };

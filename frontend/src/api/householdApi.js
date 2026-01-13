@@ -1,8 +1,8 @@
 import axiosClient from './axiosClient';
 
 const householdApi = {
-    getAll() {
-        return axiosClient.get('/households');
+    getAll(params) {
+        return axiosClient.get('/households', { params });
     },
     create(data) {
         return axiosClient.post('/households', data);

@@ -21,7 +21,7 @@ const getTransactions = async (req, res) => {
 
         res.status(200).json(transactions);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching transactions', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi lấy danh sách giao dịch', error: error.message });
     }
 };
 
@@ -66,7 +66,7 @@ const createTransaction = async (req, res) => {
     } catch (error) {
         console.error("Lỗi khi tạo giao dịch:", error);
         res.status(400).json({ 
-            message: 'Error creating transaction', 
+            message: 'Lỗi khi tạo giao dịch', 
             error: error.message 
         });
     }
@@ -140,10 +140,10 @@ const deleteTransaction = async (req, res) => {
         const transaction = await Transaction.findByIdAndDelete(req.params.id);
 
         if (!transaction) {
-            return res.status(404).json({ message: "Không tìm thấy nhân khẩu để xóa" });
+            return res.status(404).json({ message: "Không tìm thấy giao dịch để xóa" });
         }
 
-        res.status(200).json({ message: "Đã xóa nhân khẩu thành công" });
+        res.status(200).json({ message: "Đã xóa giao dịch thành công" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

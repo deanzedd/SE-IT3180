@@ -31,7 +31,7 @@ const householdPaymentDetailSchema = mongoose.Schema({
             // Dữ liệu tài chính
             unit: { 
                 type: String,
-                enum: ['area', 'person', 'household', 'bike', 'car', 'fixed', 'm^3', 'electricity', 'default'],
+                enum: ['area', 'person', 'household', 'bike', 'car', 'fixed', 'm³', 'kWh', 'default'],
             },
             unitPrice: { type: Number, required: true }, // Giá đã ghi đè từ Session
             quantity: { type: Number, default: 0 },      // Số lượng (m2, số điện, số người...)

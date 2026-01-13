@@ -10,7 +10,8 @@ const residentSchema = mongoose.Schema({
 	phone: { type: String },
 	email: { type: String },
 	status: { type: String, enum: ['permanent', 'temporary_residence', 'temporary_absence'], default: 'permanent' },
-	household: { type: mongoose.Schema.Types.ObjectId, ref: 'Household', required: true }
+	household: { type: mongoose.Schema.Types.ObjectId, ref: 'Household', required: true },
+	isDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Resident', residentSchema);

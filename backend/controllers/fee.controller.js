@@ -1,4 +1,5 @@
 const Fee = require('../models/fee');
+const PaymentSession = require('../models/paymentSession');
 const mongoose = require('mongoose');
 
 // @desc      Get all fees
@@ -6,10 +7,31 @@ const mongoose = require('mongoose');
 // @access    Private
 const getFees = async (req, res) => {
     try {
-        const fees = await Fee.find({});
-        res.status(200).json(fees);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || '';
+
+        const isDeleted = req.query.isDeleted === 'true' || req.query.isDeleted === true;
+        const filter = isDeleted ? { isDeleted: true } : { isDeleted: { $ne: true } };
+        
+        if (search) {
+            filter.name = { $regex: search, $options: 'i' };
+        }
+
+        const total = await Fee.countDocuments(filter);
+        const fees = await Fee.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit);
+        res.status(200).json({
+            data: fees,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching fees', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi lấy danh sách khoản thu', error: error.message });
     }
 };
 
@@ -21,9 +43,9 @@ const createFee = async (req, res) => {
 
     try {
         // Check if a fee with the same name already exists
-        const existingFee = await Fee.findOne({ name });
+        const existingFee = await Fee.findOne({ name, isDeleted: { $ne: true } });
         if (existingFee) {
-            return res.status(400).json({ message: 'A fee with this name already exists.' });
+            return res.status(400).json({ message: 'Khoản thu với tên này đã tồn tại.' });
         }
 
         const fee = new Fee({
@@ -37,7 +59,7 @@ const createFee = async (req, res) => {
         const createdFee = await fee.save();
         res.status(201).json(createdFee);
     } catch (error) {
-        res.status(400).json({ message: 'Error creating fee', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi tạo khoản thu', error: error.message });
     }
 };
 
@@ -50,7 +72,7 @@ const editFee = async (req, res) => {
     const updateData = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid Fee ID format' });
+        return res.status(400).json({ message: 'Định dạng ID khoản thu không hợp lệ' });
     }
 
     try {
@@ -62,12 +84,12 @@ const editFee = async (req, res) => {
         );
 
         if (!updatedFee) {
-            return res.status(404).json({ message: 'Fee not found' });
+            return res.status(404).json({ message: 'Không tìm thấy khoản thu' });
         }
 
         res.status(200).json(updatedFee);
     } catch (error) {
-        res.status(400).json({ message: 'Error updating fee', error: error.message });
+        res.status(400).json({ message: 'Lỗi khi cập nhật khoản thu', error: error.message });
     }
 };
 
@@ -78,22 +100,28 @@ const deleteFee = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid Fee ID format' });
+        return res.status(400).json({ message: 'Định dạng ID khoản thu không hợp lệ' });
     }
 
     try {
         const fee = await Fee.findById(id);
 
         if (fee) {
-            // NOTE: In a real system, you would check if this fee is linked to any active PaymentSession or Transaction
-            // If linked, deletion should be prevented or soft-deleted. 
-            await Fee.deleteOne({ _id: id });
-            res.status(200).json({ message: 'Fee successfully removed' });
+            // Check if fee is used in any active PaymentSession
+            const activeSession = await PaymentSession.findOne({ 'fees.fee': id, isActive: true });
+            if (activeSession) {
+                return res.status(400).json({ 
+                    message: `Không thể xóa khoản thu này vì đang được sử dụng trong đợt thu: ${activeSession.title}` 
+                });
+            }
+
+            await Fee.findByIdAndUpdate(id, { isDeleted: true });
+            res.status(200).json({ message: 'Đã xóa khoản thu thành công' });
         } else {
-            res.status(404).json({ message: 'Fee not found' });
+            res.status(404).json({ message: 'Không tìm thấy khoản thu' });
         }
     } catch (error) {
-        res.status(500).json({ message: 'Error deleting fee', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi xóa khoản thu', error: error.message });
     }
 };
 

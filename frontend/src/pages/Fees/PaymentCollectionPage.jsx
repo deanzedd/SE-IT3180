@@ -13,6 +13,9 @@ import TransactionList from '../PaymentSessions/TransactionList';
 import PaymentGrid from './PaymentGrid';
 import EditPaymentSession from '../PaymentSessions/EditPaymentSessionModal';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 // const existingFeeTypes = [
 //     { id: 1, name: 'Phí quản lý chung cư', price: 7000 },
 //     { id: 2, name: 'Phí vệ sinh', price: 30000 },
@@ -36,8 +39,13 @@ const getUnitName = (unit) => unitMap[unit] || unit;
 const PaymentCollectionPage = () => {
     // State quản lý danh sách đợt thu
     const { user } = useAuth();
+    const toast = useToast();
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalSessions, setTotalSessions] = useState(0);
 
     // View state: LIST | DETAIL | INPUT_MONEY
     const [view, setView] = useState('LIST');
@@ -75,8 +83,11 @@ const PaymentCollectionPage = () => {
     const fetchSessions = async () => {
         try {
             setLoading(true);
-            const response = await paymentSessionApi.getAll();
-            setSessions(Array.isArray(response.data) ? response.data : []);
+            const response = await paymentSessionApi.getAll({ page });
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setSessions(data || []);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            setTotalSessions(response.data.meta?.total || 0);
         } catch (error) {
             console.error('Lỗi tải danh sách đợt thu:', error);
         } finally {
@@ -86,7 +97,7 @@ const PaymentCollectionPage = () => {
 
     const fetchAllFees = async () => {
         try {
-            const response = await feeApi.getAll(); // Gọi tới API danh mục phí
+            const response = await feeApi.getAll({ limit: 1000 }); // Gọi tới API danh mục phí (Lấy tất cả)
             setAllFees(response.data);
         } catch (error) {
             console.error('Lỗi tải danh mục phí:', error);
@@ -144,9 +155,10 @@ const PaymentCollectionPage = () => {
             setCreateModalOpen(false);
             setView('DETAIL');
             setSessionFormData({ title: '', startDate: new Date(), endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)), description: '' });
+            toast.success('Tạo đợt thu thành công');
         } catch (error) {
             console.error('Lỗi tạo đợt thu:', error);
-            alert('Tạo đợt thu thất bại');
+            toast.error('Tạo đợt thu thất bại');
         }
     };
 
@@ -162,44 +174,56 @@ const PaymentCollectionPage = () => {
                 );
                 
                 // 2. Thông báo thành công (nếu có toast)
+                toast.success('Cập nhật đợt thu thành công');
             }
         } catch (error) {
             console.error("Lỗi khi cập nhật:", error);
-            alert("Có lỗi xảy ra khi lưu thay đổi.");
+            toast.error("Có lỗi xảy ra khi lưu thay đổi.");
         }
     };
 
     const handleDeleteSession = async (id) => {
-        if (window.confirm('Xác nhận xóa đợt thu?')) {
-            try {
-                await paymentSessionApi.remove(id);
-                fetchSessions();
-            } catch (error) {
-                alert('Lỗi khi xóa');
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa đợt thu',
+            message: 'Bạn có chắc chắn muốn xóa đợt thu này? Tất cả dữ liệu liên quan sẽ bị xóa.',
+            onConfirm: async () => {
+                try {
+                    await paymentSessionApi.remove(id);
+                    fetchSessions();
+                    toast.success('Đã xóa đợt thu');
+                } catch (error) {
+                    toast.error('Lỗi khi xóa');
+                }
             }
-        }
+        });
     }
 
     const handleDeleteFee = async (feeIdInSession) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa khoản phí này khỏi đợt thu?')) {
-            try {
-                // feeIdInSession chính là cái _id nằm ngang hàng với fee object trong mảng fees
-                // Endpoint: /api/payments/sessions/:session_id/:fee_id
-                await paymentSessionApi.removeFee(currentSession._id, feeIdInSession);
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa khoản phí khỏi đợt thu',
+            message: 'Bạn có chắc chắn muốn xóa khoản phí này khỏi đợt thu hiện tại?',
+            onConfirm: async () => {
+                try {
+                    // feeIdInSession chính là cái _id nằm ngang hàng với fee object trong mảng fees
+                    // Endpoint: /api/payments/sessions/:session_id/:fee_id
+                    await paymentSessionApi.removeFee(currentSession._id, feeIdInSession);
 
-                // Cập nhật lại state tại chỗ để giao diện biến mất khoản phí đó ngay
-                const updatedFees = currentSession.fees.filter(f => f._id !== feeIdInSession);
-                const updatedSession = { ...currentSession, fees: updatedFees };
+                    // Cập nhật lại state tại chỗ để giao diện biến mất khoản phí đó ngay
+                    const updatedFees = currentSession.fees.filter(f => f._id !== feeIdInSession);
+                    const updatedSession = { ...currentSession, fees: updatedFees };
 
-                setCurrentSession(updatedSession);
-                setSessions(sessions.map(s => s._id === currentSession._id ? updatedSession : s));
+                    setCurrentSession(updatedSession);
+                    setSessions(sessions.map(s => s._id === currentSession._id ? updatedSession : s));
 
-                alert('Đã xóa khoản phí thành công');
-            } catch (error) {
-                console.error('Lỗi khi xóa khoản phí:', error);
-                alert('Không thể xóa khoản phí');
+                    toast.success('Đã xóa khoản phí thành công');
+                } catch (error) {
+                    console.error('Lỗi khi xóa khoản phí:', error);
+                    toast.error('Không thể xóa khoản phí');
+                }
             }
-        }
+        });
     };
 
     const handleToggleCell = async (row, item) => {
@@ -218,7 +242,7 @@ const PaymentCollectionPage = () => {
             // fetchTransactions(); 
         } catch (error) {
             console.error("Lỗi cập nhật thanh toán:", error);
-            alert("Không thể cập nhật trạng thái");
+            toast.error("Không thể cập nhật trạng thái");
         }
     };
 
@@ -265,9 +289,10 @@ const PaymentCollectionPage = () => {
             setSessions(sessions.map(s => (s._id || s.id) === (currentSession._id || currentSession.id) ? sessionResponse.data : s));
 
             setIsNewFeeModalOpen(false);
+            toast.success('Thêm khoản thu thành công');
         } catch (error) {
             console.error('Lỗi thêm khoản thu:', error);
-            alert('Thêm khoản thu thất bại');
+            toast.error('Thêm khoản thu thất bại');
         }
     };
 
@@ -289,9 +314,10 @@ const PaymentCollectionPage = () => {
 
             setIsAddFeeModalOpen(false);
             setAddFeeStep('CHOICE');
+            toast.success('Đã thêm khoản thu vào đợt');
         } catch (error) {
             console.error('Lỗi thêm khoản thu:', error);
-            alert('Thêm khoản thu thất bại');
+            toast.error('Thêm khoản thu thất bại');
         }
     };
 
@@ -308,7 +334,7 @@ const PaymentCollectionPage = () => {
 
             await paymentSessionApi.updateColumnQuantity(sessionId, feeInSessionId, updates);
 
-            alert(`Đã cập nhật số liệu cho cột "${selectedFeeForInput.fee?.name}" thành công!`);
+            toast.success(`Đã cập nhật số liệu cho cột "${selectedFeeForInput.fee?.name}" thành công!`);
             setInputData({});
             setSelectedFeeForInput(null);
             setView('DETAIL');
@@ -317,7 +343,7 @@ const PaymentCollectionPage = () => {
             fetchSessions();
         } catch (error) {
             console.error("Lỗi lưu số liệu cột:", error);
-            alert("Lưu thất bại");
+            toast.error("Lưu thất bại");
         }
     };
 
@@ -340,7 +366,7 @@ const PaymentCollectionPage = () => {
                 </div>
                 <div>
                     <p className="text-gray-600 text-sm">Tổng số đợt thu</p>
-                    <p className="text-gray-900 font-bold">{sessions.length}</p>
+                    <p className="text-gray-900 font-bold">{totalSessions}</p>
                 </div>
             </div>
 
@@ -447,6 +473,12 @@ const PaymentCollectionPage = () => {
                     </div>
                 )}
             </div>
+
+            <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                onPageChange={setPage} 
+            />
         </div>
     );
 
@@ -460,7 +492,7 @@ const PaymentCollectionPage = () => {
             try {
                 // Gọi API để backend tính toán phí dựa trên diện tích/số xe của hộ dân
                 await paymentSessionApi.calculateAutoFees(currentSession._id || currentSession.id);
-                alert("Đã cập nhật tính toán phí tự động cho toàn bộ căn hộ!");
+                toast.success("Đã cập nhật tính toán phí tự động cho toàn bộ căn hộ!");
                 fetchSessions(); // Refresh lại dữ liệu
                 await fetchPaymentDetails();
             } catch (error) {
@@ -732,7 +764,7 @@ const PaymentCollectionPage = () => {
     // --- HÀM XUẤT EXCEL---
     const handleExportExcel = () => {
         if (!currentSession || !currentSession.fees) {
-            alert("Dữ liệu đợt thu chưa tải đủ để xuất Excel!");
+            toast.warning("Dữ liệu đợt thu chưa tải đủ để xuất Excel!");
             return;
         }
 
@@ -796,7 +828,7 @@ const PaymentCollectionPage = () => {
             }))
             .sort((a, b) => (tOrder[a.feeType] || 99) - (tOrder[b.feeType] || 99));
 
-        if (excelFeeHeaders.length === 0) { alert("Không có khoản thu nào!"); return; }
+        if (excelFeeHeaders.length === 0) { toast.warning("Không có khoản thu nào!"); return; }
 
         // 4. XỬ LÝ DỮ LIỆU BODY
         const bodyRows = householdDetails.map((record, index) => {
@@ -1162,6 +1194,11 @@ const PaymentCollectionPage = () => {
                 onClose={() => setIsEditModalOpen(false)}
                 initialData={currentSession} // Truyền session đang được chọn vào đây
                 onSubmit={handleUpdateSession} // Hàm gọi API update
+            />
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
             />
         </div>
     );

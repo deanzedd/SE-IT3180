@@ -1,20 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import householdApi from '../../api/householdApi';
-import { Plus, Edit, Trash2, User, Home as HomeIcon, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit, Trash2, User, Home as HomeIcon, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { Button } from '../../components/common/Button.jsx';
 import SearchBar from '../../components/common/SearchBar.jsx';
 import Table from '../../components/common/Table.jsx';
 import { useAuth } from '../../context/AuthContext'; // Lấy user từ context
 import { exportToExcel } from '../../utils/excelHandle';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 const HouseholdPage = () => {
     const { user } = useAuth(); // Lấy thông tin user đã đăng nhập
+    const toast = useToast();
     const [households, setHouseholds] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingHousehold, setEditingHousehold] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showDeleted, setShowDeleted] = useState(false);
+    const [deletedHouseholds, setDeletedHouseholds] = useState([]);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalHouseholds, setTotalHouseholds] = useState(0);
+    const prevSearchTerm = useRef(searchTerm);
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -25,22 +36,57 @@ const HouseholdPage = () => {
     });
 
     useEffect(() => {
-        if (user?.token) {
-            fetchHouseholds();
+        if (prevSearchTerm.current === searchTerm) {
+            return;
         }
-    }, [user]);
+        prevSearchTerm.current = searchTerm;
+        const delayDebounceFn = setTimeout(() => {
+            if (page === 1) {
+                fetchHouseholds();
+            } else {
+                setPage(1);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     const fetchHouseholds = async () => {
         try {
             setLoading(true);
-            const response = await householdApi.getAll();
-            setHouseholds(response.data);
+            const response = await householdApi.getAll({ page, search: searchTerm });
+            // Support both old array format (if backend not updated) and new paginated format
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setHouseholds(data || []);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            setTotalHouseholds(response.data.meta?.total || 0);
         } catch (error) {
             console.error('Lỗi tải dữ liệu:', error);
+            toast.error(error.response?.data?.message || 'Không thể tải dữ liệu danh sách hộ khẩu.');
         } finally {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchHouseholds();
+    }, [page]);
+
+
+    const fetchDeletedHouseholds = async () => {
+        try {
+            const response = await householdApi.getAll({ isDeleted: true });
+            setDeletedHouseholds(response.data);
+        } catch (error) {
+            console.error('Lỗi tải dữ liệu đã xóa:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (showDeleted) {
+            fetchDeletedHouseholds();
+        }
+    }, [showDeleted]);
 
     const tableHeaders = [
         { label: 'Căn hộ', className: 'text-left'},
@@ -90,12 +136,31 @@ const HouseholdPage = () => {
         </tr>
     );
 
-    const filteredHouseholds = households.filter(h =>
-        h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    const renderDeletedRow = (household) => (
+        <tr key={household._id} className="bg-gray-50 text-gray-500">
+            <td className="py-4 px-6">{household.apartmentNumber}</td>
+            <td className="text-left py-4 px-6">{household.ownerName || 'Trống'}</td>
+            <td className="text-left py-4 px-6">{household.area}m²</td>
+            <td className="text-left py-4 px-6">{household.members?.length || 0}</td>
+            <td className="text-left py-4 px-6">{household.motorbikeNumber}</td>
+            <td className="text-left py-4 px-6">{household.carNumber}</td>
+            <td className="text-left py-4 px-6">Đã xóa</td>
+            {canEdit && (
+            <td className="py-4 px-6">
+                <button onClick={() => handleRestore(household._id)} className="text-green-500 hover:text-green-700" title="Khôi phục">
+                    <RotateCcw size={18} />
+                </button>
+            </td>
+            )}
+        </tr>
     );
 
+    // const filteredHouseholds = households.filter(h =>
+    //     h.apartmentNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    // );
+
     const handleExportExcel = () => {
-        const dataToExport = filteredHouseholds.map(h => ({
+        const dataToExport = households.map(h => ({
             "Số phòng": h.apartmentNumber,
             "Chủ hộ": h.ownerName || 'Trống',
             "Diện tích (m2)": h.area,
@@ -143,20 +208,46 @@ const HouseholdPage = () => {
             }
             fetchHouseholds();
             setIsModalOpen(false);
+            toast.success(editingHousehold ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
-            alert(error.response?.data?.message || "Lỗi khi lưu dữ liệu");
+            toast.error(error.response?.data?.message || "Có lỗi xảy ra khi lưu dữ liệu");
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Xác nhận xóa hộ khẩu?')) {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa hộ khẩu',
+            message: 'Bạn có chắc chắn muốn xóa hộ khẩu này?',
+            onConfirm: async () => {
                 try {
                     await householdApi.remove(id);
                     fetchHouseholds();
+                    toast.success('Đã xóa hộ khẩu');
                 } catch (error) {
-                    alert('Lỗi khi xóa');
+                    toast.error(error.response?.data?.message || 'Lỗi khi xóa hộ khẩu');
                 }
-        }
+            }
+        });
+    };
+
+    const handleRestore = async (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Khôi phục hộ khẩu',
+            message: 'Bạn có muốn khôi phục hộ khẩu này?',
+            type: 'info',
+            onConfirm: async () => {
+                try {
+                    await householdApi.update(id, { isDeleted: false });
+                    fetchDeletedHouseholds();
+                    fetchHouseholds();
+                    toast.success('Khôi phục thành công');
+                } catch (error) {
+                    toast.error(error.response?.data?.message || 'Lỗi khi khôi phục');
+                }
+            }
+        });
     };
 
     if (loading) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
@@ -184,7 +275,7 @@ const HouseholdPage = () => {
                     </div>
                     <div>
                         <p className="text-gray-600 text-sm">Tổng số căn hộ</p>
-                        <p className="text-gray-900 font-bold">{households.length}</p>
+                        <p className="text-gray-900 font-bold">{totalHouseholds}</p>
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
@@ -194,10 +285,36 @@ const HouseholdPage = () => {
 
             <Table 
                 headers={tableHeaders} 
-                data={filteredHouseholds} 
+                data={households} 
                 renderRow={renderHouseholdRow} 
-                footerText={<>Kết quả: <span className="font-bold">{filteredHouseholds.length}</span> căn hộ</>}
+                footerText={<>Hiển thị <span className="font-bold">{households.length}</span> / {totalHouseholds} kết quả</>}
             />
+
+            <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                onPageChange={setPage} 
+            />
+
+            <div className="mt-4">
+                <button
+                    onClick={() => setShowDeleted(!showDeleted)}
+                    className="text-gray-500 hover:text-gray-700 underline text-sm flex items-center gap-1"
+                >
+                    {showDeleted ? 'Ẩn căn hộ đã xóa' : 'Hiển thị căn hộ đã xóa'}
+                </button>
+
+                {showDeleted && (
+                    <div className="mt-4 border-t pt-4">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-600">Danh sách căn hộ đã xóa</h3>
+                        <Table 
+                            headers={tableHeaders} 
+                            data={deletedHouseholds} 
+                            renderRow={renderDeletedRow} 
+                        />
+                    </div>
+                )}
+            </div>
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <div className="p-6">
@@ -223,13 +340,6 @@ const HouseholdPage = () => {
                                 <input type="number" value={formData.carNumber} onChange={(e) => setFormData({ ...formData, carNumber: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-                            <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="active">Đang ở</option>
-                                <option value="inactive">Trống</option>
-                            </select>
-                        </div>
                         <div className="flex gap-4 pt-6 mt-6 border-t border-gray-100">
                             <Button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-300 text-gray-700">Hủy</Button>
                             <Button type="submit" className="flex-1 bg-linear-to-r from-blue-500 to-cyan-500 font-bold shadow-lg shadow-blue-200 transition-all">{editingHousehold ? 'Cập nhật' : 'Thêm'}</Button>
@@ -237,6 +347,11 @@ const HouseholdPage = () => {
                     </form>
                 </div>
             </Modal>
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            />
         </div>
     );
 };

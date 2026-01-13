@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Receipt } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Edit, Trash2, Receipt, RotateCcw } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Table from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
@@ -7,33 +7,77 @@ import SearchBar from '../../components/common/SearchBar';
 import AddFeeModal from './AddFeeModal';
 import feeApi from '../../api/feeApi';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 const FeeManagerPage = () => {
     const { user } = useAuth();
+    const toast = useToast();
     const [fees, setFees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingFee, setEditingFee] = useState(null);
+    const [showDeleted, setShowDeleted] = useState(false);
+    const [deletedFees, setDeletedFees] = useState([]);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalFees, setTotalFees] = useState(0);
+    const prevSearchTerm = useRef(searchTerm);
 
     // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
     const canEdit = ['admin', 'accountant'].includes(user?.role);
 
     useEffect(() => {
         fetchFees();
-    }, []);
+    }, [page]);
+
+    useEffect(() => {
+        if (prevSearchTerm.current === searchTerm) {
+            return;
+        }
+        prevSearchTerm.current = searchTerm;
+        const delayDebounceFn = setTimeout(() => {
+            if (page === 1) {
+                fetchFees();
+            } else {
+                setPage(1);
+            }
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     const fetchFees = async () => {
         try {
             setLoading(true);
-            const response = await feeApi.getAll();
-            setFees(response.data);
+            const response = await feeApi.getAll({ page, search: searchTerm });
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setFees(data || []);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            setTotalFees(response.data.meta?.total || 0);
         } catch (error) {
             console.error('Lỗi tải dữ liệu:', error);
         } finally {
             setLoading(false);
         }
     };
+
+    const fetchDeletedFees = async () => {
+        try {
+            const response = await feeApi.getAll({ isDeleted: true });
+            setDeletedFees(response.data);
+        } catch (error) {
+            console.error('Lỗi tải dữ liệu đã xóa:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (showDeleted) {
+            fetchDeletedFees();
+        }
+    }, [showDeleted]);
 
     const headers = [
         { label: 'Tên khoản thu', className: 'text-left' },
@@ -60,6 +104,8 @@ const FeeManagerPage = () => {
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     item.type === 'voluntary' 
                         ? 'bg-green-100 text-green-700' 
+                        : item.type === 'mandatory_manual'
+                        ? 'bg-orange-100 text-orange-700'
                         : 'bg-red-100 text-red-700'
                 }`}>
                     {item.type === 'mandatory_automatic' && 'Bắt buộc (Tự động)'}
@@ -83,6 +129,35 @@ const FeeManagerPage = () => {
         </tr>
     );
 
+    const renderDeletedRow = (item) => (
+        <tr key={item._id} className="bg-gray-50 text-gray-500">
+            <td className="py-4 px-6 font-medium">{item.name}</td>
+            <td className="py-4 px-6">
+                {item.unitPrice ? `${new Intl.NumberFormat('vi-VN').format(item.unitPrice)} đ` : '-'}
+            </td>
+            <td className="py-4 px-6">
+                {item.unit ? getUnitLabel(item.unit) : '-'}
+            </td>
+            <td className="py-4 px-6">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600`}>
+                    {item.type === 'mandatory_automatic' && 'Bắt buộc (Tự động)'}
+                    {item.type === 'mandatory_manual' && 'Bắt buộc (Thủ công)'}
+                    {item.type === 'voluntary' && 'Tự nguyện'}
+                </span>
+            </td>
+            <td className="py-4 px-6 italic truncate max-w-xs">{item.description}</td>
+            {canEdit && (
+            <td className="py-4 px-6">
+                <div className="flex gap-3">
+                    <button onClick={() => handleRestore(item._id)} className="flex items-center justify-center w-7 h-7 rounded-md text-green-500 hover:text-green-700 hover:bg-green-50 transition-colors" title="Khôi phục">
+                        <RotateCcw size={18} />
+                    </button>
+                </div>
+            </td>
+            )}
+        </tr>
+    );
+
     const handleOpenModal = (fee = null) => {
         setEditingFee(fee);
         setIsModalOpen(true);
@@ -97,20 +172,45 @@ const FeeManagerPage = () => {
             }
             fetchFees();
             setIsModalOpen(false);
+            toast.success(editingFee ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
-            alert('Lỗi: ' + (error.response?.data?.message || error.message));
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
     const handleDelete = (id) => {
-        if (window.confirm('Xóa khoản thu này?')) {
-            feeApi.remove(id)
-                .then(() => fetchFees())
-                .catch(error => alert('Lỗi khi xóa: ' + (error.response?.data?.message || error.message)));
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa khoản thu',
+            message: 'Bạn có chắc chắn muốn xóa khoản thu này?',
+            onConfirm: () => {
+                feeApi.remove(id)
+                    .then(() => { fetchFees(); toast.success('Đã xóa khoản thu'); })
+                    .catch(error => toast.error(error.response?.data?.message || 'Lỗi khi xóa khoản thu'));
+            }
+        });
     };
 
-    const filteredFees = fees.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const handleRestore = async (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Khôi phục khoản thu',
+            message: 'Bạn có muốn khôi phục khoản thu này?',
+            type: 'info',
+            onConfirm: async () => {
+                try {
+                    await feeApi.update(id, { isDeleted: false });
+                    fetchDeletedFees();
+                    fetchFees();
+                    toast.success('Khôi phục thành công');
+                } catch (error) {
+                    toast.error(error.response?.data?.message || 'Lỗi khi khôi phục khoản thu');
+                }
+            }
+        });
+    };
+
+    // const filteredFees = fees.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const getUnitLabel = (unit) => {
         const unitMap = {
@@ -118,10 +218,10 @@ const FeeManagerPage = () => {
             'person': 'Số người',
             'household': 'Hộ gia đình',
             'fixed': 'Cố định',
-            'water': 'Mét khối (m³)',
+            'm³': 'Mét khối (m³)',
             'car': 'Ô tô',
             'bike': 'Xe máy',
-            'electricity': 'kWh',
+            'kWh': 'kWh',
             'default': 'Nhập thẳng số tiền',
         };
         return unitMap[unit] || unit;
@@ -153,7 +253,7 @@ const FeeManagerPage = () => {
                     </div>
                     <div>
                         <p className="text-gray-600 text-sm">Tổng danh mục phí</p>
-                        <p className="text-gray-900 font-bold">{fees.length} loại</p>
+                        <p className="text-gray-900 font-bold">{totalFees} loại</p>
                     </div>
                 </div>
                 <div className="flex-1 max-w-md">
@@ -167,16 +267,47 @@ const FeeManagerPage = () => {
 
             <Table
                 headers={headers}
-                data={filteredFees}
+                data={fees}
                 renderRow={renderRow}
-                footerText={<>Tổng số: <span className="font-bold text-gray-700">{filteredFees.length}</span> loại phí</>}
+                footerText={<>Hiển thị: <span className="font-bold text-gray-700">{fees.length}</span> / {totalFees} loại phí</>}
             />
+
+            <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                onPageChange={setPage} 
+            />
+
+            <div className="mt-4">
+                <button
+                    onClick={() => setShowDeleted(!showDeleted)}
+                    className="text-gray-500 hover:text-gray-700 underline text-sm flex items-center gap-1"
+                >
+                    {showDeleted ? 'Ẩn khoản thu đã xóa' : 'Hiển thị khoản thu đã xóa'}
+                </button>
+
+                {showDeleted && (
+                    <div className="mt-4 border-t pt-4">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-600">Danh sách khoản thu đã xóa</h3>
+                        <Table 
+                            headers={headers} 
+                            data={deletedFees} 
+                            renderRow={renderDeletedRow} 
+                        />
+                    </div>
+                )}
+            </div>
 
             <AddFeeModal 
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
                 onSubmit={handleSubmit}
                 initialData={editingFee}
+            />
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
             />
         </div>
     );

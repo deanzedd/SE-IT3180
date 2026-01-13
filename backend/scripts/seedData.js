@@ -63,7 +63,8 @@ const seedUsers = async () => {
     const users = [
         { username: 'admin', password: 'Admin123!', fullName: 'Quản Trị Viên', role: 'admin' },
         { username: 'manager', password: 'Manager123!', fullName: 'Cán Bộ Quản Lý', role: 'manager' },
-        { username: 'accountant', password: 'Accountant123!', fullName: 'Kế Toán Viên', role: 'accountant' }
+        { username: 'accountant', password: 'Accountant123!', fullName: 'Kế Toán Viên', role: 'accountant' },
+        { username: 'accountant02', password: 'Accountant123!', fullName: 'Kế Toán Đi Tù', role: 'accountant', status: 'Tạm khóa' }
     ];
 
     for (const u of users) {
@@ -83,8 +84,8 @@ const seedFees = async () => {
         { name: 'Phí quản lý chung cư', type: 'mandatory_automatic', unit: 'area', unitPrice: 7000, description: '7k/m2' },
         { name: 'Phí gửi xe máy', type: 'mandatory_automatic', unit: 'bike', unitPrice: 70000, description: '70k/xe' },
         { name: 'Phí gửi ô tô', type: 'mandatory_automatic', unit: 'car', unitPrice: 1200000, description: '1.2tr/xe' },
-        { name: 'Tiền điện', type: 'mandatory_manual', unit: 'electricity', unitPrice: 3500, description: 'Theo số công tơ' },
-        { name: 'Tiền nước', type: 'mandatory_manual', unit: 'm^3', unitPrice: 15000, description: 'Theo khối' },
+        { name: 'Tiền điện', type: 'mandatory_manual', unit: 'kWh', unitPrice: 3500, description: 'Theo số công tơ' },
+        { name: 'Tiền nước', type: 'mandatory_manual', unit: 'm³', unitPrice: 15000, description: 'Theo khối' },
         { name: 'Quỹ Nuôi em', type: 'voluntary', unit: 'default', unitPrice: 0, description: 'Tự nguyện' }
     ];
 
@@ -108,21 +109,27 @@ const seedHouseholdsAndResidents = async () => {
             apt: '101', area: 80, bikes: 2, cars: 0,
             residents: [
                 { name: 'Nguyễn Văn A', idCard: '001088000001', relation: 'owner', gender: 'male', dob: '1980-01-01' },
-                { name: 'Trần Thị B', idCard: '001088000002', relation: 'spouse', gender: 'female', dob: '1982-05-05' }
+                { name: 'Trần Thị B', idCard: '001088000002', relation: 'spouse', gender: 'female', dob: '1982-05-05' },
+                { name: 'Nguyễn Văn C', idCard: '001088000003', relation: 'child', gender: 'male', dob: '2000-01-01' },
+                { name: 'Nguyễn Thị D', idCard: '001088000004', relation: 'child', gender: 'female', dob: '2004-05-20' }
             ]
         },
         {
             apt: '102', area: 100, bikes: 1, cars: 1,
             residents: [
-                { name: 'Lê Văn C', idCard: '001088000003', relation: 'owner', gender: 'male', dob: '1975-10-10' },
-                { name: 'Phạm Thị D', idCard: '001088000004', relation: 'spouse', gender: 'female', dob: '1978-12-12' },
-                { name: 'Lê Văn E', idCard: '001088000005', relation: 'child', gender: 'male', dob: '2005-01-01' }
+                { name: 'Lê Văn E', idCard: '001088000005', relation: 'owner', gender: 'male', dob: '1975-10-10' },
+                { name: 'Phạm Thị F', idCard: '001088000006', relation: 'spouse', gender: 'female', dob: '1978-12-12' },
+                { name: 'Lê Văn G', idCard: '001088000007', relation: 'child', gender: 'male', dob: '2005-01-01' },
+                { name: 'Lê Văn H', idCard: '001088000008', relation: 'parent', gender: 'male', dob: '1945-09-02' },
+                { name: 'Ngô Thị I', idCard: '001088000009', relation: 'parent', gender: 'female', dob: '1950-04-30' }
             ]
         },
         {
             apt: '201', area: 65, bikes: 1, cars: 0,
             residents: [
-                { name: 'Hoàng Thị F', idCard: '001088000006', relation: 'owner', gender: 'female', dob: '1990-03-08' }
+                { name: 'Hoàng Thị J', idCard: '001088000010', relation: 'owner', gender: 'female', dob: '1990-03-08' },
+                { name: 'Nguyễn Văn K', idCard: '001088000011', relation: 'child', gender: 'male', dob: '2005-08-30' },
+                { name: 'Trần Văn L', idCard: '001088000012', relation: 'renter', gender: 'male', dob: '2005-11-09' }
             ]
         },
         {
@@ -182,10 +189,10 @@ const seedSessionsAndDetails = async (fees, households) => {
 
     // Tạo 1 đợt thu mẫu
     const sessionData = {
-        title: `Thu phí tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`,
+        title: `Thu phí tháng 1/2026`,
         description: 'Thu phí quản lý, gửi xe và điện nước định kỳ',
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+        startDate: new Date('2026-01-10'),
+        endDate: new Date('2026-01-31'),
         createdBy: admin?._id,
         fees: fees.map(f => ({
             fee: f._id,
@@ -321,6 +328,119 @@ const seedSessionsAndDetails = async (fees, households) => {
             console.log(`✓ Created partial transaction for Household ${partialPayer.household}`);
         }
     }
+
+    // --- TẠO ĐỢT THU 2: Thu phí tháng 12/2025 (Đã đóng đủ) ---
+    const sessionData2 = {
+        title: 'Thu phí tháng 12/2025',
+        description: 'Thu phí cuối năm, tất cả hộ dân đã hoàn thành nghĩa vụ',
+        startDate: new Date('2025-12-10'),
+        endDate: new Date('2025-12-31'),
+        createdBy: admin?._id,
+        fees: fees.map(f => ({
+            fee: f._id,
+            unitPrice: f.unitPrice
+        }))
+    };
+
+    const session2 = await PaymentSession.create(sessionData2);
+    
+    for (const hh of households) {
+        const items = session2.fees.map(sessionFee => {
+            const feeDef = fees.find(f => f._id.toString() === sessionFee.fee.toString());
+            let quantity = 0;
+
+            if (feeDef.type === 'mandatory_automatic') {
+                switch (feeDef.unit) {
+                    case 'area': quantity = hh.area; break;
+                    case 'bike': quantity = hh.motorbikeNumber; break;
+                    case 'car': quantity = hh.carNumber; break;
+                    default: quantity = 1;
+                }
+            } else if (feeDef.type === 'mandatory_manual' && hh.status === 'active') {
+                if (feeDef.unit === 'electricity') quantity = Math.floor(Math.random() * 200) + 50;
+                if (feeDef.unit === 'm^3') quantity = Math.floor(Math.random() * 20) + 5;
+            }
+
+            const totalAmount = quantity * (sessionFee.unitPrice || feeDef.unitPrice);
+
+            return {
+                feeInSessionId: sessionFee._id,
+                feeRef: feeDef._id,
+                feeType: feeDef.type,
+                feeName: feeDef.name,
+                unit: feeDef.unit,
+                unitPrice: sessionFee.unitPrice || feeDef.unitPrice,
+                quantity: quantity,
+                totalAmount: totalAmount,
+                paidAmount: totalAmount, // Full paid
+                isPaid: true
+            };
+        });
+
+        const totalBill = items.reduce((sum, i) => sum + i.totalAmount, 0);
+
+        await HouseholdPaymentDetail.create({
+            paymentSession: session2._id,
+            household: hh._id,
+            items: items,
+            totalBill: totalBill,
+            totalPaidAmount: totalBill,
+            status: 'paid'
+        });
+
+        if (totalBill > 0) {
+            await Transaction.create({
+                household: hh._id,
+                paymentSession: session2._id,
+                amount: totalBill,
+                payerName: 'Chủ hộ (Auto)',
+                method: 'bank',
+                note: 'Thanh toán đủ (Seed)',
+                status: 'checked',
+                createdBy: admin?._id
+            });
+            session2.totalPaidMandatory += totalBill;
+        }
+    }
+    await session2.save();
+    console.log(`✓ Created Payment Session: "${session2.title}" (All Paid)`);
+};
+
+// --- 5. SEED RESIDENCE CHANGES ---
+const seedResidenceChanges = async () => {
+    console.log('📝 Seeding Residence Changes...');
+    
+    // 1. Tạm vắng cho Nguyễn Văn G
+    const residentG = await Resident.findOne({ fullName: 'Nguyễn Văn K' });
+    if (residentG) {
+        await ResidenceChange.create({
+            resident: residentG._id,
+            changeType: 'temporary_absence',
+            startDate: new Date('2025-01-15'),
+            endDate: new Date('2025-07-15'),
+            destination: 'KTX Đại học Quốc Gia',
+            note: 'Đi học đại học'
+        });
+        residentG.status = 'temporary_absence';
+        await residentG.save();
+        console.log(`✓ Created Temporary Absence for ${residentG.fullName}`);
+    }
+
+    // 2. Tạm trú cho Trần Văn H
+    const residentH = await Resident.findOne({ fullName: 'Trần Văn L' });
+    if (residentH) {
+        await ResidenceChange.create({
+            resident: residentH._id,
+            changeType: 'temporary_residence',
+            startDate: new Date('2025-02-01'),
+            endDate: new Date('2026-02-01'),
+            household: residentH.household,
+            note: 'Khách thuê nhà dài hạn'
+        });
+        residentH.status = 'temporary_residence';
+        await residentH.save();
+        console.log(`✓ Created Temporary Residence for ${residentH.fullName}`);
+    }
 };
 
 // --- MAIN EXECUTION ---
@@ -360,6 +480,11 @@ const runSeed = async () => {
         } else {
             console.log('⚠ Skipping Sessions: Need Fees and Households data first.');
         }
+    }
+
+    // 5. Residence Changes
+    if (seedAll || args.includes('--changes')) {
+        await seedResidenceChanges();
     }
 
     console.log('\n🎉 Seeding Completed Successfully!');

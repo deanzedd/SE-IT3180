@@ -6,8 +6,25 @@ const Resident = require('../models/resident');
 //DỰ KIẾN: KHI LOAD TRANG KHÔNG CẦN GỌI MEMBER, MÀ SẼ GỌI KHI BẤM NÚT CHI TIẾT
 const getHouseholds = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || '';
+
+        const isDeleted = req.query.isDeleted === 'true' || req.query.isDeleted === true;
+        const filter = isDeleted ? { isDeleted: true } : { isDeleted: { $ne: true } };
+
+        if (search) {
+            filter.apartmentNumber = { $regex: search, $options: 'i' };
+        }
+
+        const total = await Household.countDocuments(filter);
         // Populate members để lấy thông tin chi tiết nhân khẩu
-        const households = await Household.find().populate('members').sort({ apartmentNumber: 1 });
+        const households = await Household.find(filter)
+            .populate('members')
+            .sort({ apartmentNumber: 1 })
+            .skip(skip)
+            .limit(limit);
         
         // Map qua từng hộ để tìm chủ hộ và thêm trường ownerName
         const data = households.map(h => {
@@ -21,7 +38,15 @@ const getHouseholds = async (req, res) => {
             };
         });
 
-        res.status(200).json(data);
+        res.status(200).json({
+            data,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -30,14 +55,14 @@ const getHouseholds = async (req, res) => {
 // @desc    Create new household
 // @route   POST /api/households
 const createHousehold = async (req, res) => {
-    const { apartmentNumber, area, motorbikeNumber, carNumber, status } = req.body;
+    const { apartmentNumber, area, motorbikeNumber, carNumber } = req.body;
     try {
         // Validate required fields
         if (!apartmentNumber || !area) {
             return res.status(400).json({ message: "Vui lòng nhập số căn hộ và diện tích" });
         }
 
-        const household = new Household({ apartmentNumber, area, motorbikeNumber, carNumber, status });
+        const household = new Household({ apartmentNumber, area, motorbikeNumber, carNumber });
         const createdHousehold = await household.save();
         res.status(201).json(createdHousehold);
     } catch (error) {
@@ -49,21 +74,28 @@ const createHousehold = async (req, res) => {
 // @route   DELETE /api/households/:id
 const deleteHousehold = async (req, res) => {
     try {
-        // 1. Tìm và xóa hộ khẩu trực tiếp
-        const household = await Household.findByIdAndDelete(req.params.id);
+        const { id } = req.params;
 
-        // 2. Kiểm tra nếu không tìm thấy ID
+        // 1. Kiểm tra hộ khẩu tồn tại
+        const household = await Household.findById(id);
         if (!household) {
-            return res.status(404).json({ message: "Household not found" });
+            return res.status(404).json({ message: "Không tìm thấy hộ khẩu" });
         }
 
-        // 3. Trả về thông báo thành công (Status 200)
+        // 2. Kiểm tra xem có nhân khẩu nào đang thuộc hộ này không
+        const residentCount = await Resident.countDocuments({ household: id });
+        if (residentCount > 0) {
+            return res.status(400).json({ message: "Không thể xóa hộ khẩu đang có thành viên cư trú." });
+        }
+
+        // 3. Thực hiện xóa
+        await Household.findByIdAndUpdate(id, { isDeleted: true });
+
         res.status(200).json({ 
-            message: "Household deleted successfully",
+            message: "Đã xóa hộ khẩu thành công",
             deletedHousehold: household 
         });
     } catch (error) {
-        // 4. Lỗi server hoặc ID không đúng định dạng ObjectId
         res.status(500).json({ message: error.message });
     }
 };
@@ -72,12 +104,15 @@ const deleteHousehold = async (req, res) => {
 // @route   PUT /api/households/:id
 const updateHousehold = async (req, res) => {
     try {
+        // Prevent manual status update
+        const { status, ...updateData } = req.body;
+
         // 1. Tìm và cập nhật hộ khẩu bằng findByIdAndUpdate
         // { new: true }: Trả về object sau khi đã cập nhật thay vì object cũ
         // { runValidators: true }: Đảm bảo dữ liệu mới vẫn tuân thủ Schema (vd: required, enum)
         const updatedHousehold = await Household.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            updateData,
             { new: true, runValidators: true }
         );
 

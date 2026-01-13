@@ -1,18 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Search, User, Shield, Eye } from 'lucide-react';
 import SearchBar from '../../components/common/SearchBar';
 import Table from '../../components/common/Table';
 import {Button} from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import userApi from '../../api/userApi';
+import { useToast } from '../../context/ToastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
 
 const UserManagementPage = () => {
+    const toast = useToast();
     const [nguoiDungs, setNguoiDungs] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const tableHeaders = [
         { label: 'Họ và tên', className: 'text-left'},
+        { label: 'Tên đăng nhập', className: 'text-left'},
+        { label: 'Email', className: 'text-left'},
+        { label: 'SĐT', className: 'text-left'},
         { label: 'Vai trò', className: 'text-left'},
+        { label: 'Trạng thái', className: 'text-left'},
         { label: 'Thao tác', className: 'text-right'}
     ];
 
@@ -25,13 +33,20 @@ const UserManagementPage = () => {
                     </div>
                     <div className="min-w-0"> {/* Tránh tràn text nếu tên quá dài */}
                         <p className="text-gray-800 font-medium truncate">{nguoiDung.fullName}</p>
-                        <p className="text-gray-500 text-xs truncate">{nguoiDung.email}</p>
                     </div>
                 </div>
             </td>
+            <td className="px-6 py-4 text-gray-600">{nguoiDung.username}</td>
+            <td className="px-6 py-4 text-gray-600">{nguoiDung.email}</td>
+            <td className="px-6 py-4 text-gray-600">{nguoiDung.phone}</td>
             <td className="px-6 py-4">
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getVaiTroColor(nguoiDung.role)}`}>
                     {getVaiTroLabel(nguoiDung.role)}
+                </span>
+            </td>
+            <td className="px-6 py-4">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${nguoiDung.status === 'Hoạt động' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
+                    {nguoiDung.status}
                 </span>
             </td>
             <td className="px-6 py-4">
@@ -53,6 +68,11 @@ const UserManagementPage = () => {
     const [editingNguoiDung, setEditingNguoiDung] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewingNguoiDung, setViewingNguoiDung] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalUsers, setTotalUsers] = useState(0);
+    const prevSearchTerm = useRef(searchTerm);
 
     // Filter checkboxes
     const [filterVaiTro, setFilterVaiTro] = useState({
@@ -73,13 +93,31 @@ const UserManagementPage = () => {
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [page]);
+
+    useEffect(() => {
+        if (prevSearchTerm.current === searchTerm) {
+            return;
+        }
+        prevSearchTerm.current = searchTerm;
+        const delayDebounceFn = setTimeout(() => {
+            if (page === 1) {
+                fetchUsers();
+            } else {
+                setPage(1);
+            }
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await userApi.getAll();
-            setNguoiDungs(response.data);
+            const response = await userApi.getAll({ page, search: searchTerm });
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setNguoiDungs(data || []);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            setTotalUsers(response.data.meta?.total || 0);
         } catch (error) {
             console.error('Lỗi tải dữ liệu:', error);
         } finally {
@@ -120,11 +158,16 @@ const UserManagementPage = () => {
     };
 
     const handleDelete = (id) => {
-        if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
-            userApi.remove(id)
-                .then(() => fetchUsers())
-                .catch(error => alert('Lỗi khi xóa: ' + (error.response?.data?.message || error.message)));
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa người dùng',
+            message: 'Bạn có chắc chắn muốn xóa người dùng này?',
+            onConfirm: () => {
+                userApi.remove(id)
+                    .then(() => { fetchUsers(); toast.success('Đã xóa người dùng'); })
+                    .catch(error => toast.error(error.response?.data?.message || 'Lỗi khi xóa người dùng'));
+            }
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -138,30 +181,29 @@ const UserManagementPage = () => {
             }
             fetchUsers();
             setShowModal(false);
+            toast.success(editingNguoiDung ? 'Cập nhật thành công' : 'Thêm mới thành công');
         } catch (error) {
-            alert('Lỗi: ' + (error.response?.data?.message || error.message));
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
     // Filter logic
+    // Note: Search is now handled by backend, but role filtering is still client-side for simplicity 
+    // unless we move it to backend too. For now, let's keep role filtering client side on the current page data
+    // or move it to backend. Moving to backend is better.
+    // But to keep changes minimal, I will apply role filter on the fetched page data.
     const filteredNguoiDungs = nguoiDungs.filter((n) => {
-        const matchesSearch =
-            (n.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (n.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (n.email || '').toLowerCase().includes(searchTerm.toLowerCase());
 
         const hasActiveFilter = filterVaiTro.admin || filterVaiTro.manager || filterVaiTro.accountant;
 
-        if (!hasActiveFilter) {
-            return matchesSearch;
-        }
+        if (!hasActiveFilter) return true;
 
         const matchesFilter =
             (filterVaiTro.admin && n.role === 'admin') ||
             (filterVaiTro.manager && n.role === 'manager') ||
             (filterVaiTro.accountant && n.role === 'accountant');
 
-        return matchesSearch && matchesFilter;
+        return matchesFilter;
     });
 
     const getVaiTroLabel = (role) => {
@@ -193,28 +235,28 @@ const UserManagementPage = () => {
     const stats = [
         {
             label: 'Tổng người dùng',
-            value: nguoiDungs.length,
+            value: totalUsers,
             icon: User,
             color: 'bg-indigo-500',
         },
-        {
-            label: 'Admin',
-            value: nguoiDungs.filter((n) => n.role === 'admin').length,
-            icon: Shield,
-            color: 'bg-red-500',
-        },
-        {
-            label: 'Quản lý',
-            value: nguoiDungs.filter((n) => n.role === 'manager').length,
-            icon: User,
-            color: 'bg-blue-500',
-        },
-        {
-            label: 'Kế toán',
-            value: nguoiDungs.filter((n) => n.role === 'accountant').length,
-            icon: User,
-            color: 'bg-green-500',
-        },
+        // {
+        //     label: 'Admin',
+        //     value: nguoiDungs.filter((n) => n.role === 'admin').length,
+        //     icon: Shield,
+        //     color: 'bg-red-500',
+        // },
+        // {
+        //     label: 'Quản lý',
+        //     value: nguoiDungs.filter((n) => n.role === 'manager').length,
+        //     icon: User,
+        //     color: 'bg-blue-500',
+        // },
+        // {
+        //     label: 'Kế toán',
+        //     value: nguoiDungs.filter((n) => n.role === 'accountant').length,
+        //     icon: User,
+        //     color: 'bg-green-500',
+        // },
     ];
 
     if (loading) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
@@ -313,9 +355,15 @@ const UserManagementPage = () => {
                     renderRow={renderUserRow}
                     footerText={
                         <>
-                            Kết quá gồm: <span className="font-bold text-gray-700">{filteredNguoiDungs.length}</span> người dùng
+                            Hiển thị: <span className="font-bold text-gray-700">{filteredNguoiDungs.length}</span> / {totalUsers} người dùng
                         </>
                     }
+                />
+
+                <Pagination 
+                    currentPage={page} 
+                    totalPages={totalPages} 
+                    onPageChange={setPage} 
                 />
             </div>
             {/* View Detail Modal, TẠM BỎ*/}
@@ -431,7 +479,6 @@ const UserManagementPage = () => {
                                     <label className="block text-gray-700 mb-2 font-medium">Email</label>
                                     <input
                                         type="email"
-                                        required
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -443,7 +490,6 @@ const UserManagementPage = () => {
                                     <label className="block text-gray-700 mb-2 font-medium">Số điện thoại</label>
                                     <input
                                         type="tel"
-                                        required
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -516,6 +562,11 @@ const UserManagementPage = () => {
                     </div>
                 </Modal>
             )}
+
+            <ConfirmModal 
+                {...confirmModal}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            />
         </div>
     );
 };
