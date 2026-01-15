@@ -28,7 +28,7 @@ const ResidenceChangePage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
     const [page, setPage] = useState(1);
-    const ITEMS_PER_PAGE = 10;
+    const [limit, setLimit] = useState(10);
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -123,8 +123,8 @@ const ResidenceChangePage = () => {
     });
 
     // Client-side pagination logic
-    const totalPages = Math.ceil(filteredChanges.length / ITEMS_PER_PAGE);
-    const paginatedChanges = filteredChanges.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredChanges.length / limit);
+    const paginatedChanges = filteredChanges.slice((page - 1) * limit, page * limit);
 
 
     const handleExportExcel = () => {
@@ -231,15 +231,33 @@ const ResidenceChangePage = () => {
                     headers={headers} 
                     data={paginatedChanges} 
                     renderRow={renderRow}
-                    footerText={<>Hiển thị: <span className="font-bold">{paginatedChanges.length}</span> / {filteredChanges.length} kết quả</>}
+                    footerText={
+                        <div className="flex justify-between items-center w-full">
+                            <span>Hiển thị: <span className="font-bold">{paginatedChanges.length}</span> / {filteredChanges.length} kết quả</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600">Hiển thị:</span>
+                                <select
+                                    value={limit}
+                                    onChange={(e) => {
+                                        setLimit(Number(e.target.value));
+                                        setPage(1);
+                                    }}
+                                    className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                    <option value={10000}>Tất cả</option>
+                                </select>
+                            </div>
+                        </div>
+                    }
                 />
             </div>
 
-            <Pagination 
-                currentPage={page} 
-                totalPages={totalPages} 
-                onPageChange={setPage} 
-            />
+            <div className="flex justify-end mt-4">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+            </div>
 
             <ResidenceChangeModal 
                 isOpen={isModalOpen}

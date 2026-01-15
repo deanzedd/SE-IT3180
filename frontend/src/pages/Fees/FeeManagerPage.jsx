@@ -23,8 +23,12 @@ const FeeManagerPage = () => {
     const [deletedFees, setDeletedFees] = useState([]);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
     const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [totalFees, setTotalFees] = useState(0);
+    const [deletedPage, setDeletedPage] = useState(1);
+    const [deletedTotalPages, setDeletedTotalPages] = useState(1);
+    const [deletedSearchTerm, setDeletedSearchTerm] = useState('');
     const prevSearchTerm = useRef(searchTerm);
 
     // Phân quyền: Admin và Accountant có quyền sửa đổi (Full), Manager chỉ xem
@@ -32,7 +36,7 @@ const FeeManagerPage = () => {
 
     useEffect(() => {
         fetchFees();
-    }, [page]);
+    }, [page, limit]);
 
     useEffect(() => {
         if (prevSearchTerm.current === searchTerm) {
@@ -52,7 +56,7 @@ const FeeManagerPage = () => {
     const fetchFees = async () => {
         try {
             setLoading(true);
-            const response = await feeApi.getAll({ page, search: searchTerm });
+            const response = await feeApi.getAll({ page, limit, search: searchTerm });
             const data = Array.isArray(response.data) ? response.data : response.data.data;
             setFees(data || []);
             setTotalPages(response.data.meta?.totalPages || 1);
@@ -66,8 +70,10 @@ const FeeManagerPage = () => {
 
     const fetchDeletedFees = async () => {
         try {
-            const response = await feeApi.getAll({ isDeleted: true });
-            setDeletedFees(response.data);
+            const response = await feeApi.getAll({ isDeleted: true, page: deletedPage, search: deletedSearchTerm });
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setDeletedFees(data || []);
+            setDeletedTotalPages(response.data.meta?.totalPages || 1);
         } catch (error) {
             console.error('Lỗi tải dữ liệu đã xóa:', error);
         }
@@ -77,7 +83,17 @@ const FeeManagerPage = () => {
         if (showDeleted) {
             fetchDeletedFees();
         }
-    }, [showDeleted]);
+    }, [showDeleted, deletedPage]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            if (showDeleted) {
+                if (deletedPage === 1) fetchDeletedFees();
+                else setDeletedPage(1);
+            }
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [deletedSearchTerm]);
 
     const headers = [
         { label: 'Tên khoản thu', className: 'text-left' },
@@ -269,14 +285,32 @@ const FeeManagerPage = () => {
                 headers={headers}
                 data={fees}
                 renderRow={renderRow}
-                footerText={<>Hiển thị: <span className="font-bold text-gray-700">{fees.length}</span> / {totalFees} loại phí</>}
+                footerText={
+                    <div className="flex justify-between items-center w-full">
+                        <span>Hiển thị: <span className="font-bold text-gray-700">{fees.length}</span> / {totalFees} loại phí</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">Hiển thị:</span>
+                            <select
+                                value={limit}
+                                onChange={(e) => {
+                                    setLimit(Number(e.target.value));
+                                    setPage(1);
+                                }}
+                                className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={10000}>Tất cả</option>
+                            </select>
+                        </div>
+                    </div>
+                }
             />
 
-            <Pagination 
-                currentPage={page} 
-                totalPages={totalPages} 
-                onPageChange={setPage} 
-            />
+            <div className="flex justify-end mt-4">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+            </div>
 
             <div className="mt-4">
                 <button
@@ -288,11 +322,21 @@ const FeeManagerPage = () => {
 
                 {showDeleted && (
                     <div className="mt-4 border-t pt-4">
-                        <h3 className="text-lg font-semibold mb-3 text-gray-600">Danh sách khoản thu đã xóa</h3>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-lg font-semibold text-gray-600">Danh sách khoản thu đã xóa</h3>
+                            <div className="w-64">
+                                <SearchBar searchTerm={deletedSearchTerm} setSearchTerm={setDeletedSearchTerm} placeholder="Tìm kiếm..." />
+                            </div>
+                        </div>
                         <Table 
                             headers={headers} 
                             data={deletedFees} 
                             renderRow={renderDeletedRow} 
+                        />
+                        <Pagination 
+                            currentPage={deletedPage} 
+                            totalPages={deletedTotalPages} 
+                            onPageChange={setDeletedPage} 
                         />
                     </div>
                 )}

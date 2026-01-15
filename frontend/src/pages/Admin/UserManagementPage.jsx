@@ -70,6 +70,7 @@ const UserManagementPage = () => {
     const [viewingNguoiDung, setViewingNguoiDung] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
     const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [totalUsers, setTotalUsers] = useState(0);
     const prevSearchTerm = useRef(searchTerm);
@@ -93,7 +94,7 @@ const UserManagementPage = () => {
 
     useEffect(() => {
         fetchUsers();
-    }, [page]);
+    }, [page, limit]);
 
     useEffect(() => {
         if (prevSearchTerm.current === searchTerm) {
@@ -113,7 +114,7 @@ const UserManagementPage = () => {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await userApi.getAll({ page, search: searchTerm });
+            const response = await userApi.getAll({ page, limit, search: searchTerm });
             const data = Array.isArray(response.data) ? response.data : response.data.data;
             setNguoiDungs(data || []);
             setTotalPages(response.data.meta?.totalPages || 1);
@@ -354,17 +355,31 @@ const UserManagementPage = () => {
                     data={filteredNguoiDungs} 
                     renderRow={renderUserRow}
                     footerText={
-                        <>
-                            Hiển thị: <span className="font-bold text-gray-700">{filteredNguoiDungs.length}</span> / {totalUsers} người dùng
-                        </>
+                        <div className="flex justify-between items-center w-full">
+                            <span>Hiển thị: <span className="font-bold text-gray-700">{filteredNguoiDungs.length}</span> / {totalUsers} người dùng</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600">Hiển thị:</span>
+                                <select
+                                    value={limit}
+                                    onChange={(e) => {
+                                        setLimit(Number(e.target.value));
+                                        setPage(1);
+                                    }}
+                                    className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                    <option value={10000}>Tất cả</option>
+                                </select>
+                            </div>
+                        </div>
                     }
                 />
 
-                <Pagination 
-                    currentPage={page} 
-                    totalPages={totalPages} 
-                    onPageChange={setPage} 
-                />
+                <div className="flex justify-end mt-4">
+                    <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+                </div>
             </div>
             {/* View Detail Modal, TẠM BỎ*/}
             {/* {viewingNguoiDung && (
