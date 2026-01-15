@@ -44,6 +44,7 @@ const PaymentCollectionPage = () => {
     const [loading, setLoading] = useState(true);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
     const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [totalSessions, setTotalSessions] = useState(0);
 
@@ -83,7 +84,7 @@ const PaymentCollectionPage = () => {
     const fetchSessions = async () => {
         try {
             setLoading(true);
-            const response = await paymentSessionApi.getAll({ page });
+            const response = await paymentSessionApi.getAll({ page, limit });
             const data = Array.isArray(response.data) ? response.data : response.data.data;
             setSessions(data || []);
             setTotalPages(response.data.meta?.totalPages || 1);
@@ -94,6 +95,10 @@ const PaymentCollectionPage = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchSessions();
+    }, [page, limit]);
 
     const fetchAllFees = async () => {
         try {
@@ -130,7 +135,6 @@ const PaymentCollectionPage = () => {
 
     // useEffect duy nhất quản lý việc tải dữ liệu chi tiết
     useEffect(() => {
-        fetchSessions();
         fetchAllFees();
         if (currentSession?._id && ['DETAIL', 'INPUT_MONEY', 'APPROVE_TRANSACTION'].includes(view)) {
             fetchPaymentDetails();
@@ -474,11 +478,25 @@ const PaymentCollectionPage = () => {
                 )}
             </div>
 
-            <Pagination 
-                currentPage={page} 
-                totalPages={totalPages} 
-                onPageChange={setPage} 
-            />
+            <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-4">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Hiển thị:</span>
+                    <select
+                        value={limit}
+                        onChange={(e) => {
+                            setLimit(Number(e.target.value));
+                            setPage(1);
+                        }}
+                        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                        <option value={10}>10 dòng</option>
+                        <option value={20}>20 dòng</option>
+                        <option value={50}>50 dòng</option>
+                        <option value={10000}>Tất cả</option>
+                    </select>
+                </div>
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+            </div>
         </div>
     );
 

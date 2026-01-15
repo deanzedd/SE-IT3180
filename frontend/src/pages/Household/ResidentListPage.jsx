@@ -30,8 +30,12 @@ const ResidentListPage = () => {
     const [deletedResidents, setDeletedResidents] = useState([]);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
     const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [totalResidents, setTotalResidents] = useState(0);
+    const [deletedPage, setDeletedPage] = useState(1);
+    const [deletedTotalPages, setDeletedTotalPages] = useState(1);
+    const [deletedSearchTerm, setDeletedSearchTerm] = useState('');
 
     // Phân quyền: Chỉ Admin và Manager được phép Thêm/Sửa/Xóa
     const canEdit = ['admin', 'manager'].includes(user?.role);
@@ -55,7 +59,7 @@ const ResidentListPage = () => {
         try {
             setLoading(true);
             const [resResidents, resHouseholds] = await Promise.all([
-                residentsApi.getAll({ page, search: searchTerm }),
+                residentsApi.getAll({ page, limit, search: searchTerm }),
                 householdApi.getAll({ limit: 1000 }) // Lấy tất cả hộ khẩu cho dropdown
             ]);
 
@@ -79,7 +83,7 @@ const ResidentListPage = () => {
     // 2. useEffect gọi dữ liệu
     useEffect(() => {
         fetchData();
-    }, [page]);
+    }, [page, limit]);
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
@@ -92,8 +96,10 @@ const ResidentListPage = () => {
 
     const fetchDeletedResidents = async () => {
         try {
-            const response = await residentsApi.getAll({ isDeleted: true });
-            setDeletedResidents(Array.isArray(response.data) ? response.data : []);
+            const response = await residentsApi.getAll({ isDeleted: true, page: deletedPage, search: deletedSearchTerm });
+            const data = Array.isArray(response.data) ? response.data : response.data.data;
+            setDeletedResidents(data || []);
+            setDeletedTotalPages(response.data.meta?.totalPages || 1);
         } catch (error) {
             console.error('Lỗi tải dữ liệu đã xóa:', error);
         }
@@ -103,7 +109,17 @@ const ResidentListPage = () => {
         if (showDeleted) {
             fetchDeletedResidents();
         }
-    }, [showDeleted]);
+    }, [showDeleted, deletedPage]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            if (showDeleted) {
+                if (deletedPage === 1) fetchDeletedResidents();
+                else setDeletedPage(1);
+            }
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [deletedSearchTerm]);
 
 
     // const filteredResidents = residents?.filter(resident =>
@@ -356,17 +372,31 @@ const ResidentListPage = () => {
                     data={residents}
                     renderRow={renderResidentRow}
                     footerText={
-                        <>
-                            Hiển thị: <span className="font-bold text-gray-700">{residents.length}</span> / {totalResidents} cư dân
-                        </>
+                        <div className="flex justify-between items-center w-full">
+                            <span>Hiển thị: <span className="font-bold text-gray-700">{residents.length}</span> / {totalResidents} cư dân</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600">Hiển thị:</span>
+                                <select
+                                    value={limit}
+                                    onChange={(e) => {
+                                        setLimit(Number(e.target.value));
+                                        setPage(1);
+                                    }}
+                                    className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                    <option value={10000}>Tất cả</option>
+                                </select>
+                            </div>
+                        </div>
                     }
                 />
 
-                <Pagination 
-                    currentPage={page} 
-                    totalPages={totalPages} 
-                    onPageChange={setPage} 
-                />
+                <div className="flex justify-end mt-4">
+                    <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+                </div>
             </div>
 
             <div className="mt-4">
@@ -379,11 +409,21 @@ const ResidentListPage = () => {
 
                 {showDeleted && (
                     <div className="mt-4 border-t pt-4">
-                        <h3 className="text-lg font-semibold mb-3 text-gray-600">Danh sách nhân khẩu đã xóa</h3>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-lg font-semibold text-gray-600">Danh sách nhân khẩu đã xóa</h3>
+                            <div className="w-64">
+                                <SearchBar searchTerm={deletedSearchTerm} setSearchTerm={setDeletedSearchTerm} placeholder="Tìm kiếm..." />
+                            </div>
+                        </div>
                         <Table 
                             headers={tableHeaders} 
                             data={deletedResidents} 
                             renderRow={renderDeletedRow} 
+                        />
+                        <Pagination 
+                            currentPage={deletedPage} 
+                            totalPages={deletedTotalPages} 
+                            onPageChange={setDeletedPage} 
                         />
                     </div>
                 )}
